@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background full square (maskable — Android clips to shape) -->
+  <rect width="512" height="512" fill="#1a1410"/>
+  <!-- Morille mushroom, même icône mais légèrement plus petite pour la safe zone maskable (80%) -->
+  <g transform="translate(93, 80) scale(13.5)">
+    <!-- Chapeau morille (cap) -->
+    <ellipse cx="12" cy="8" rx="9" ry="7" fill="#b85c2a"/>
+    <ellipse cx="12" cy="7.5" rx="7" ry="5" fill="#8c3e18"/>
+    <!-- Alvéoles morille -->
+    <ellipse cx="8"  cy="6"  rx="1.8" ry="2.2" fill="#6b2a0e" opacity="0.7"/>
+    <ellipse cx="12" cy="5"  rx="1.8" ry="2.2" fill="#6b2a0e" opacity="0.7"/>
+    <ellipse cx="16" cy="6"  rx="1.8" ry="2.2" fill="#6b2a0e" opacity="0.7"/>
+    <ellipse cx="9"  cy="9.5" rx="1.5" ry="1.8" fill="#6b2a0e" opacity="0.7"/>
+    <ellipse cx="14" cy="9.5" rx="1.5" ry="1.8" fill="#6b2a0e" opacity="0.7"/>
+    <!-- Contour bas du chapeau -->
+    <rect x="3" y="13.5" width="18" height="1.2" rx="0.6" fill="#8c3e18"/>
+    <!-- Pied -->
+    <rect x="9" y="14" width="6" height="9" rx="1" fill="#e8d5b7"/>
+    <rect x="10" y="14" width="4" height="9" rx="0.5" fill="#d4c0a0"/>
+  </g>
+</svg>

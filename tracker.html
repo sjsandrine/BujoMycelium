@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#b85c2a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mon Tracker">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cormorant+Upright:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg-deep: #1a1410; --bg-soft: #221a14; --bg-card: #2a201a;
+  --bg-card-hover: #322620; --border: #3d2f25; --border-soft: #2f241c;
+  --moutarde: #c9a227; --moutarde-soft: #a88820;
+  --orange-brule: #b85c2a; --orange-soft: #8f4520;
+  --ocre: #a67c3a; --blanc-casse: #f0e6d2;
+  --blanc-mute: #b8a892; --blanc-faded: #7a6d5e;
+  --vert-mousse: #6b8e4e; --vert-deep: #4a6b35;
+  --shadow-warm: 0 4px 20px rgba(184,92,42,0.08);
+  --shadow-deep: 0 8px 32px rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Cormorant Garamond',serif;
+  background:var(--bg-deep);color:var(--blanc-casse);
+  min-height:100vh;font-size:17px;line-height:1.5;
+  background-image:
+    radial-gradient(circle at 20% 0%,rgba(184,92,42,0.06) 0%,transparent 50%),
+    radial-gradient(circle at 80% 100%,rgba(201,162,39,0.04) 0%,transparent 50%);
+  background-attachment:fixed;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:0.03;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  z-index:1;
+}
+.container{max-width:1100px;margin:0 auto;padding:32px 28px 80px;position:relative;z-index:2;}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:28px;overflow-x:auto;}
+.tab{
+  padding:14px 22px;color:var(--blanc-mute);font-family:'Cormorant Upright',serif;
+  font-size:15px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;
+  cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;
+}
+.tab:hover{color:var(--blanc-casse);}
+.tab.active{color:var(--moutarde);border-bottom-color:var(--moutarde);}
+.panel{display:none;}.panel.active{display:block;}
+.date-strip{margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.date-clickable{font-family:'Cormorant Upright',serif;font-size:22px;font-weight:600;color:var(--blanc-casse);cursor:pointer;transition:color 0.2s;}
+.date-clickable:hover{text-decoration:underline;text-underline-offset:3px;}
+.date-clickable.past{color:var(--orange-brule);}
+.date-clickable .cycle{color:var(--orange-brule);font-style:italic;font-weight:500;}
+.date-clickable.past .cycle{color:var(--moutarde);}
+.date-clickable .sep{color:var(--ocre);margin:0 8px;}
+.nav-arrow{background:transparent;border:none;color:var(--ocre);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;transition:color 0.15s;}
+.nav-arrow:hover{color:var(--moutarde);}
+.today-btn{background:transparent;border:1px dashed var(--ocre);color:var(--ocre);padding:4px 12px;font-family:'Cormorant Upright',serif;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;border-radius:3px;transition:all 0.15s;}
+.today-btn:hover{color:var(--moutarde);border-color:var(--moutarde);}
+.future-banner{background:rgba(166,124,58,0.08);border:1px dashed var(--ocre);border-radius:4px;padding:10px 16px;margin-bottom:14px;font-style:italic;color:var(--ocre);font-size:15px;}
+.cal-popup{position:absolute;z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:14px;width:268px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:'Cormorant Upright',serif;font-size:16px;}
+.cal-header button{background:transparent;border:none;color:var(--ocre);font-size:18px;cursor:pointer;padding:2px 6px;}
+.cal-header button:hover{color:var(--moutarde);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-dow{text-align:center;font-size:10px;color:var(--blanc-faded);font-family:'Cormorant Upright',serif;text-transform:uppercase;padding:3px 0;}
+.cal-day{text-align:center;padding:5px 2px;font-size:13px;border-radius:3px;position:relative;color:var(--blanc-mute);}
+.cal-sel{cursor:pointer;}.cal-sel:hover{background:rgba(166,124,58,0.12);color:var(--blanc-casse);}
+.cal-active{outline:2px solid var(--vert-mousse);outline-offset:-2px;color:var(--vert-mousse);}
+.cal-disp{background:rgba(184,92,42,0.25);color:var(--orange-brule);}
+.cal-dis{opacity:0.3;}
+.cal-dot{position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--moutarde);border-radius:50%;}
+.cycle-table{width:100%;border-collapse:collapse;font-size:13px;}
+.cycle-table th{font-family:'Cormorant Upright',serif;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--blanc-faded);padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);}
+.cycle-table td{padding:4px 8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;border-bottom:1px solid var(--border-soft);}
+.cycle-table tr.empty td{color:var(--blanc-faded);font-family:'Cormorant Garamond',serif;font-style:italic;}
+.cycle-controls{display:flex;align-items:center;gap:8px;font-size:14px;}
+.cycle-controls button{background:transparent;border:1px solid var(--border);color:var(--blanc-mute);border-radius:3px;width:24px;height:24px;cursor:pointer;font-size:16px;line-height:1;}
+.level-card{
+  background:linear-gradient(135deg,var(--bg-card) 0%,var(--bg-soft) 100%);
+  border:1px solid var(--border);border-radius:4px;padding:20px 24px;
+  margin-bottom:16px;position:relative;overflow:hidden;
+}
+.level-card::after{
+  content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+  background:radial-gradient(circle,rgba(201,162,39,0.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.level-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+.level-name{font-family:'Cormorant Upright',serif;font-size:24px;font-weight:600;color:var(--blanc-casse);}
+.level-name .num{color:var(--moutarde);font-weight:500;margin-right:10px;}
+.level-name .title{font-style:italic;color:var(--orange-brule);}
+.xp-progress-text{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--blanc-mute);}
+.xp-progress-text strong{color:var(--moutarde);}
+.progress-bar{height:7px;background:var(--bg-deep);border-radius:2px;overflow:hidden;border:1px solid var(--border-soft);}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--ocre),var(--moutarde));border-radius:1px;box-shadow:0 0 8px rgba(201,162,39,0.35);transition:width 0.5s ease;}
+.counters{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;}
+.counter-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:4px;
+  padding:16px 18px;display:flex;justify-content:space-between;align-items:center;
+}
+.counter-block{text-align:left;}
+.counter-label{font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:4px;}
+.counter-value{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500;color:var(--blanc-casse);line-height:1;display:flex;align-items:center;gap:6px;}
+.counter-value.gold{color:var(--moutarde);}
+.counter-value.orange{color:var(--orange-brule);}
+.counter-divider{width:1px;height:38px;background:var(--border);margin:0 12px;}
+.section-title{
+  font-family:'Cormorant Upright',serif;font-size:13px;color:var(--ocre);
+  text-transform:uppercase;letter-spacing:0.18em;margin:26px 0 12px;
+  padding-bottom:8px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.section-title::before{content:"❦";color:var(--orange-brule);font-size:14px;}
+.sleep-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:4px;
+  padding:16px 18px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;
+}
+.sleep-input-group{flex:1;min-width:100px;}
+.sleep-input-group label{display:block;font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:5px;}
+.time-input{
+  background:var(--bg-deep);border:1px solid var(--border);border-radius:3px;
+  padding:7px 10px;color:var(--blanc-casse);font-family:'JetBrains Mono',monospace;font-size:15px;width:100%;
+}
+.time-input:focus{outline:none;border-color:var(--ocre);}
+.sleep-result{flex:1;min-width:120px;}
+.sleep-result-value{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--vert-mousse);font-style:italic;}
+.tracker-grid{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:4px;
+  padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;
+}
+.tracker-item label{display:block;font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:5px;}
+.tracker-item input{
+  background:var(--bg-deep);border:1px solid var(--border);border-radius:3px;
+  padding:7px 10px;color:var(--blanc-casse);font-family:'JetBrains Mono',monospace;font-size:14px;width:100%;
+}
+.tracker-item input:focus{outline:none;border-color:var(--ocre);}
+.weed-warning{font-size:12px;color:var(--orange-brule);margin-top:4px;font-style:italic;}
+.remede{
+  background:rgba(107,142,78,0.06);border:1px dashed var(--vert-deep);
+  border-radius:4px;padding:16px 20px;margin-bottom:4px;position:relative;overflow:hidden;
+}
+.remede-bg-deco{
+  position:absolute;top:-10px;right:-10px;width:110px;height:110px;
+  opacity:0.12;transform:rotate(-15deg);pointer-events:none;
+}
+.remede-subtitle{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--vert-mousse);font-size:16px;margin-bottom:14px;}
+.remede-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;position:relative;z-index:1;}
+.remede-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--bg-card);border:1px solid var(--border-soft);border-radius:3px;cursor:pointer;transition:all 0.15s;
+}
+.remede-item:hover{border-color:var(--vert-mousse);}
+.remede-item.checked{background:rgba(107,142,78,0.12);border-color:var(--vert-mousse);}
+.remede-icon{flex-shrink:0;width:28px;height:28px;color:var(--vert-mousse);}
+.remede-item.checked .remede-icon{color:var(--moutarde);}
+.remede-name{font-size:15px;}
+.remede-pts{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--orange-brule);margin-left:auto;}
+.abstinence{
+  margin-top:14px;padding:15px 18px;
+  background:linear-gradient(135deg,rgba(184,92,42,0.12),rgba(201,162,39,0.06));
+  border:1px solid var(--orange-soft);border-radius:4px;
+  display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all 0.2s;
+}
+.abstinence:hover{border-color:var(--orange-brule);}
+.abstinence.checked{background:linear-gradient(135deg,rgba(184,92,42,0.2),rgba(201,162,39,0.12));border-color:var(--moutarde);}
+.abstinence-left{display:flex;align-items:center;gap:14px;}
+.abst-checkbox{width:22px;height:22px;border:1.5px solid var(--moutarde);border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.abstinence.checked .abst-checkbox{background:var(--vert-mousse);border-color:var(--vert-mousse);}
+.abstinence-name{font-family:'Cormorant Upright',serif;font-size:19px;font-weight:600;color:var(--blanc-casse);}
+.abstinence-sub{font-size:13px;color:var(--blanc-mute);font-style:italic;}
+.abstinence-reward{display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:13px;}
+.streak-mini{font-size:13px;color:var(--blanc-mute);margin-top:8px;text-align:center;}
+.streak-mini strong{color:var(--moutarde);font-family:'JetBrains Mono',monospace;}
+.habits-row{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:24px;}
+.habit-column-title{
+  font-family:'Cormorant Upright',serif;font-size:13px;text-transform:uppercase;
+  letter-spacing:0.18em;margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;color:var(--moutarde);
+}
+.habit-column-title.resp{color:var(--orange-brule);}
+.habit-column-title svg{width:15px;height:15px;}
+.habit{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-soft);
+  border-radius:3px;margin-bottom:5px;cursor:pointer;transition:all 0.15s;
+}
+.habit:hover{background:var(--bg-card-hover);border-color:var(--border);}
+.habit.checked{background:linear-gradient(90deg,rgba(107,142,78,0.12),rgba(107,142,78,0.04));border-color:rgba(107,142,78,0.4);}
+.habit-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.checkbox{
+  width:17px;height:17px;border:1.5px solid var(--ocre);border-radius:2px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;
+}
+.habit.checked .checkbox{background:var(--vert-mousse);border-color:var(--vert-mousse);}
+.habit.checked .checkbox::after{content:"✓";color:white;font-size:11px;font-weight:bold;}
+.habit-name{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.habit.checked .habit-name{color:var(--blanc-mute);}
+.habit-reward{display:flex;align-items:center;gap:5px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.habit-reward .pts{color:var(--orange-brule);}
+.habit-reward .xp{color:var(--moutarde);}
+.add-btn{
+  background:transparent;border:1px dashed var(--ocre);color:var(--ocre);
+  padding:8px 14px;font-family:'Cormorant Upright',serif;font-size:12px;
+  text-transform:uppercase;letter-spacing:0.12em;cursor:pointer;border-radius:3px;
+  margin-top:8px;transition:all 0.15s;width:100%;
+}
+.add-btn:hover{background:rgba(166,124,58,0.08);color:var(--moutarde);border-color:var(--moutarde);}
+.bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:24px;}
+.notes-area{
+  width:100%;min-height:130px;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:4px;padding:12px;color:var(--blanc-casse);font-family:'Cormorant Garamond',serif;
+  font-size:16px;resize:vertical;font-style:italic;
+}
+.notes-area::placeholder{color:var(--blanc-faded);}
+/* PROGRESSION */
+.prog-hero{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.prog-stat{text-align:center;}
+.prog-stat .big{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:500;line-height:1;}
+.prog-stat .big.orange{color:var(--orange-brule);}
+.prog-stat .big.gold{color:var(--moutarde);}
+.prog-stat .lbl{font-family:'Cormorant Upright',serif;font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:var(--blanc-faded);margin-top:4px;}
+.prog-totals{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.prog-total-card{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:16px 18px;text-align:center;}
+.prog-total-card .val{font-family:'JetBrains Mono',monospace;font-size:32px;color:var(--blanc-casse);}
+.prog-total-card .val.gold{color:var(--moutarde);}
+.prog-total-card .val.orange{color:var(--orange-brule);}
+.prog-total-card .sub{font-size:12px;color:var(--blanc-faded);font-family:'Cormorant Upright',serif;text-transform:uppercase;letter-spacing:0.12em;margin-top:4px;}
+.used-list{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:14px 18px;}
+.used-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-soft);font-size:15px;}
+.used-item:last-child{border-bottom:none;}
+.used-count{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--moutarde);}
+/* RÉCOMPENSES */
+.rew-header{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.rew-header .counter-card{text-align:center;}
+.rewards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:8px;}
+.reward-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:4px;
+  padding:16px;transition:all 0.15s;
+}
+.reward-card.available{border-color:rgba(201,162,39,0.4);}
+.reward-card.locked{opacity:0.45;}
+.reward-name{font-family:'Cormorant Upright',serif;font-size:16px;color:var(--blanc-casse);margin-bottom:6px;}
+.reward-cost{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--orange-brule);}
+.reward-lock{font-size:12px;color:var(--blanc-faded);margin-top:4px;}
+.buy-btn{
+  width:100%;margin-top:10px;background:linear-gradient(90deg,var(--orange-soft),var(--orange-brule));
+  border:none;border-radius:3px;color:white;font-family:'Cormorant Upright',serif;
+  font-size:13px;letter-spacing:0.08em;text-transform:uppercase;padding:8px;cursor:pointer;transition:opacity 0.15s;
+}
+.buy-btn:hover{opacity:0.85;}
+.buy-btn:disabled{opacity:0.35;cursor:not-allowed;}
+.edit-rewards-btn{
+  background:transparent;border:1px dashed var(--border);color:var(--blanc-faded);
+  padding:8px 16px;border-radius:3px;cursor:pointer;font-size:13px;transition:all 0.15s;
+}
+.edit-rewards-btn:hover{border-color:var(--ocre);color:var(--ocre);}
+.edit-mode-btn{background:transparent;border:none;color:var(--ocre);cursor:pointer;padding:8px;transition:all 0.15s;border-radius:4px;display:flex;align-items:center;}
+.edit-mode-btn:hover{color:var(--moutarde);}
+.edit-mode-btn.active{color:var(--moutarde);background:rgba(166,124,58,0.12);}
+.edit-done-btn{background:transparent;border:1px solid var(--ocre);color:var(--ocre);padding:4px 12px;font-family:'Cormorant Upright',serif;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;border-radius:3px;transition:all 0.15s;}
+.edit-done-btn:hover{color:var(--moutarde);border-color:var(--moutarde);}
+.reward-edit-field{background:var(--bg-deep);border:1px dashed var(--ocre);border-radius:3px;padding:4px 7px;color:var(--blanc-casse);font-family:'Cormorant Garamond',serif;font-size:14px;}
+.reward-edit-field:focus{outline:none;border-color:var(--moutarde);}
+.reward-del-btn{background:transparent;border:none;color:var(--orange-soft);cursor:pointer;padding:4px 6px;transition:color 0.15s;display:flex;align-items:center;gap:5px;font-family:'Cormorant Garamond',serif;font-size:13px;}
+.reward-del-btn:hover{color:var(--orange-brule);}
+.add-reward-form{border:1px solid var(--border);border-radius:4px;padding:16px;background:var(--bg-card);margin-top:8px;}
+/* NIVEAUX */
+.lv-row{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:4px;
+  padding:13px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;
+}
+.lv-row.current{border-color:var(--moutarde);background:rgba(201,162,39,0.04);}
+.lv-row.past{opacity:0.45;}
+.lv-left{display:flex;align-items:baseline;gap:10px;}
+.lv-num{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--blanc-faded);}
+.lv-title{font-family:'Cormorant Upright',serif;font-size:16px;color:var(--blanc-casse);}
+.lv-row.current .lv-title{color:var(--moutarde);}
+.lv-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.lv-tag{background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:20px;padding:2px 9px;font-size:12px;color:var(--blanc-faded);}
+.lv-xp{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--moutarde);}
+/* HISTORIQUE */
+.hist-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;}
+.month-btn{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:3px;
+  padding:6px 14px;color:var(--blanc-mute);font-family:'Cormorant Garamond',serif;
+  font-size:14px;cursor:pointer;transition:all 0.15s;
+}
+.month-btn.active{border-color:var(--moutarde);color:var(--moutarde);}
+.chart-block{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:16px;}
+.chart-title{font-family:'Cormorant Upright',serif;font-size:13px;color:var(--ocre);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px;}
+.chart-legend{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--blanc-mute);}
+.legend-dot{width:10px;height:10px;border-radius:50%;}
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;z-index:200;}
+.overlay.show{display:flex;}
+.modal{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+  padding:26px;max-width:400px;width:92%;
+}
+.modal-title{font-family:'Cormorant Upright',serif;font-size:18px;color:var(--blanc-casse);margin-bottom:14px;}
+.modal-body{font-size:15px;color:var(--blanc-mute);margin-bottom:20px;}
+.modal-field{margin-bottom:12px;}
+.modal-field label{display:block;font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:5px;}
+.modal-field input,.modal-field select{
+  width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:3px;
+  padding:8px 10px;color:var(--blanc-casse);font-family:'Cormorant Garamond',serif;font-size:15px;
+}
+.modal-field input:focus,.modal-field select:focus{outline:none;border-color:var(--ocre);}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+.btn-primary{
+  background:linear-gradient(90deg,var(--orange-soft),var(--orange-brule));border:none;border-radius:3px;
+  color:white;font-family:'Cormorant Upright',serif;font-size:13px;letter-spacing:0.08em;
+  text-transform:uppercase;padding:9px 18px;cursor:pointer;
+}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--blanc-mute);border-radius:3px;padding:9px 16px;cursor:pointer;font-size:14px;}
+.btn-ghost:hover{border-color:var(--ocre);color:var(--blanc-casse);}
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:var(--bg-card);border:1px solid var(--border);border-radius:6px;
+  padding:11px 22px;font-size:14px;opacity:0;transition:all 0.25s;pointer-events:none;z-index:999;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* SETTINGS MENU */
+.settings-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:var(--bg-soft);border-top:1px solid var(--border);
+  display:flex;justify-content:center;gap:14px;padding:10px 20px;
+}
+.settings-btn{
+  background:transparent;border:1px solid var(--border);color:var(--blanc-faded);
+  border-radius:3px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all 0.15s;
+}
+.settings-btn:hover{border-color:var(--ocre);color:var(--ocre);}
+.settings-btn.danger:hover{border-color:var(--orange-brule);color:var(--orange-brule);}
+/* RESPONSIVE */
+@media(max-width:720px){
+  .habits-row,.bottom-row,.counters,.prog-hero,.prog-totals,.rew-header{grid-template-columns:1fr;}
+  .level-name{font-size:20px;}
+  .container{padding:20px 16px 80px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<nav class="tabs">
+  <div class="tab active" onclick="nav('today')">Aujourd'hui</div>
+  <div class="tab" onclick="nav('progression')">Progression</div>
+  <div class="tab" onclick="nav('recompenses')">Récompenses</div>
+  <div class="tab" onclick="nav('niveaux')">Niveaux</div>
+  <div class="tab" onclick="nav('historique')">Historique</div>
+</nav>
+
+<!-- ===== AUJOURD'HUI ===== -->
+<div id="panel-today" class="panel active">
+
+  <div class="date-strip">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="nav-arrow" onclick="navDay(-1)">←</button>
+      <span id="date-clickable" class="date-clickable" onclick="openCalendar()">
+        <span id="date-full"></span><span class="sep">·</span><span class="cycle" id="cycle-label"></span>
+      </span>
+      <button class="nav-arrow" id="nav-next-btn" onclick="navDay(1)">→</button>
+      <button class="today-btn" id="btn-aujourd-hui" onclick="navToday()" style="display:none">Aujourd'hui</button>
+    </div>
+    <div class="cycle-controls">
+      <span style="font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.1em;">Cycle</span>
+      <button onclick="adjCycle(-1)">−</button>
+      <span id="cycle-num" style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--moutarde);min-width:24px;text-align:center;"></span>
+      <button onclick="adjCycle(1)">+</button>
+      <button onclick="resetCycle()" style="font-size:11px;padding:2px 6px;width:auto;">J1</button>
+    </div>
+  </div>
+  <div id="future-banner" class="future-banner" style="display:none">Journée du lendemain — seules les tâches peuvent être ajoutées.</div>
+  <div id="cal-overlay" onclick="closeCalendar()" style="display:none;position:fixed;inset:0;z-index:90;"></div>
+  <div id="cal-popup" class="cal-popup" style="display:none;position:relative;z-index:100;"></div>
+
+  <div class="level-card">
+    <div class="level-row">
+      <div class="level-name"><span class="num" id="lv-num">Niveau 1</span><span class="title" id="lv-title">Paysanne</span></div>
+      <div class="xp-progress-text" id="lv-prog-text"></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="lv-prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="counters">
+    <div class="counter-card">
+      <div class="counter-block">
+        <div class="counter-label">Glands aujourd'hui</div>
+        <div class="counter-value gold"><span id="glands-today">0</span><svg width="18" height="20" viewBox="0 0 24 28" fill="none"><ellipse cx="12" cy="18" rx="7" ry="8" fill="#6b8e4e"/><path d="M5 12 Q5 8 12 7 Q19 8 19 12 L19 14 Q12 16 5 14 Z" fill="#8a6d2c"/><path d="M12 4 Q11 6 11 7" stroke="#6b5524" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      </div>
+      <div class="counter-divider"></div>
+      <div class="counter-block">
+        <div class="counter-label">Total · glands de chêne</div>
+        <div class="counter-value gold"><span id="glands-total">0</span><svg width="22" height="20" viewBox="0 0 32 28" fill="none"><path d="M2 8 Q4 4 8 5 Q10 2 12 5 Q14 3 14 6 Q16 4 17 7 Q15 9 12 9 Q8 10 5 9 Q3 11 2 8 Z" fill="#6b8e4e"/><ellipse cx="20" cy="20" rx="6" ry="7" fill="#6b8e4e"/><path d="M14 15 Q14 12 20 11 Q26 12 26 15 L26 17 Q20 19 14 17 Z" fill="#8a6d2c"/></svg></div>
+      </div>
+    </div>
+    <div class="counter-card">
+      <div class="counter-block">
+        <div class="counter-label">Champignons aujourd'hui</div>
+        <div class="counter-value orange"><span id="champ-today">0</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></div>
+      </div>
+      <div class="counter-divider"></div>
+      <div class="counter-block">
+        <div class="counter-label">Total · morilles</div>
+        <div class="counter-value orange"><span id="champ-dispo">0</span><svg width="20" height="22" viewBox="0 0 24 28" fill="none"><ellipse cx="12" cy="9" rx="8" ry="9" fill="#8f4520"/><path d="M6 4 Q8 6 6 8 M10 3 Q12 5 10 7 M14 3 Q16 5 14 7 M18 4 Q16 6 18 8 M5 9 Q7 11 5 13 M9 8 Q11 10 9 12 M13 8 Q15 10 13 12 M17 9 Q15 11 17 13" stroke="#3d1f0f" stroke-width="0.8" fill="none"/><path d="M9 17 L9 24 Q9 26 12 26 Q15 26 15 24 L15 17 Z" fill="#c9a989"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Sommeil</div>
+  <div class="sleep-card">
+    <div class="sleep-input-group"><label>Coucher</label><input class="time-input" type="time" id="sl-coucher" onchange="calcSommeil()"></div>
+    <div class="sleep-input-group"><label>Réveil</label><input class="time-input" type="time" id="sl-reveil" onchange="calcSommeil()"></div>
+    <div class="sleep-result"><div class="counter-label">Heures de sommeil</div><div class="sleep-result-value" id="sl-result">—</div></div>
+  </div>
+
+  <div class="section-title">Tracker</div>
+  <div class="tracker-grid">
+    <div class="tracker-item"><label>Mood / 10</label><input type="number" id="tr-mood" min="0" max="10" step="1" placeholder="—" onchange="saveTracker('mood',this.value)"></div>
+    <div class="tracker-item"><label>Productivité / 10</label><input type="number" id="tr-prod" min="0" max="10" step="1" placeholder="—" onchange="saveTracker('productivite',this.value)"></div>
+    <div class="tracker-item"><label>Heures travaillées</label><input type="number" id="tr-work" min="0" step="0.5" placeholder="0" onchange="saveTracker('work',this.value)"></div>
+    <div class="tracker-item"><label>Mots écrits</label><input type="number" id="tr-mots" min="0" step="1" placeholder="0" onchange="updateMots(this.value)"></div>
+    <div class="tracker-item">
+      <label>Weed (g)</label>
+      <input type="number" id="tr-weed" min="0" step="0.1" placeholder="0" onchange="updateWeed(this.value)">
+    </div>
+    <div class="tracker-item">
+      <label>Rendement (auto)</label>
+      <div id="tr-rendement" style="font-family:'JetBrains Mono',monospace;font-size:20px;color:#a67c3a;padding:7px 0;">—</div>
+    </div>
+  </div>
+
+  <div class="section-title">Remède en cas de besoin</div>
+  <div class="remede">
+    <svg class="remede-bg-deco" viewBox="0 0 32 32" fill="none"><path d="M16 18 L16 30" stroke="#6b8e4e" stroke-width="1.5" stroke-linecap="round"/><path d="M16 24 Q13 23 12 25 Q14 26 16 25" fill="#6b8e4e"/><g fill="#f0e6d2"><ellipse cx="16" cy="6" rx="2.2" ry="4.5"/><ellipse cx="16" cy="18" rx="2.2" ry="4.5"/><ellipse cx="22" cy="12" rx="4.5" ry="2.2"/><ellipse cx="10" cy="12" rx="4.5" ry="2.2"/><ellipse cx="20.5" cy="7.5" rx="2.2" ry="4.5" transform="rotate(45 20.5 7.5)"/><ellipse cx="11.5" cy="16.5" rx="2.2" ry="4.5" transform="rotate(45 11.5 16.5)"/><ellipse cx="20.5" cy="16.5" rx="2.2" ry="4.5" transform="rotate(-45 20.5 16.5)"/><ellipse cx="11.5" cy="7.5" rx="2.2" ry="4.5" transform="rotate(-45 11.5 7.5)"/></g><circle cx="16" cy="12" r="3" fill="#c9a227"/></svg>
+    <div class="remede-subtitle">les jours plus durs, ceci suffit</div>
+    <div class="remede-row">
+      <div class="remede-item" id="rem-eau" onclick="toggleRemede('eau')">
+        <svg class="remede-icon" viewBox="0 0 32 32" fill="none"><path d="M16 4 C 12 10, 7 16, 7 21 C 7 26, 11 29, 16 29 C 21 29, 25 26, 25 21 C 25 16, 20 10, 16 4 Z" fill="currentColor" opacity="0.85"/><path d="M12 18 C 11 20, 11 23, 13 25" stroke="#f0e6d2" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.4"/></svg>
+        <span class="remede-name">Boire de l'eau</span><span class="remede-pts">+5 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></span>
+      </div>
+      <div class="remede-item" id="rem-manger" onclick="toggleRemede('manger')">
+        <svg class="remede-icon" viewBox="0 0 32 32" fill="none"><path d="M16 4 L16 11" stroke="#6b8e4e" stroke-width="1.5" stroke-linecap="round"/><path d="M16 7 Q11 6 9 9 Q12 11 16 9 Z" fill="#6b8e4e"/><circle cx="12" cy="18" r="5" fill="currentColor"/><circle cx="20" cy="18" r="5" fill="currentColor"/><circle cx="16" cy="24" r="5" fill="currentColor"/><circle cx="10.5" cy="16.5" r="1.2" fill="#f0e6d2" opacity="0.5"/><circle cx="18.5" cy="16.5" r="1.2" fill="#f0e6d2" opacity="0.5"/><circle cx="14.5" cy="22.5" r="1.2" fill="#f0e6d2" opacity="0.5"/></svg>
+        <span class="remede-name">Manger une fois</span><span class="remede-pts">+5 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></span>
+      </div>
+      <div class="remede-item" id="rem-lit" onclick="toggleRemede('lit')">
+        <svg class="remede-icon" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="6" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="16" y1="3" x2="16" y2="7"/><line x1="16" y1="25" x2="16" y2="29"/><line x1="3" y1="16" x2="7" y2="16"/><line x1="25" y1="16" x2="29" y2="16"/><line x1="6.5" y1="6.5" x2="9.5" y2="9.5"/><line x1="22.5" y1="22.5" x2="25.5" y2="25.5"/><line x1="6.5" y1="25.5" x2="9.5" y2="22.5"/><line x1="22.5" y1="9.5" x2="25.5" y2="6.5"/></g></svg>
+        <span class="remede-name">Sortir du lit</span><span class="remede-pts">+5 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Quête centrale</div>
+  <div class="abstinence" id="abst-card" onclick="toggleAbst()">
+    <div class="abstinence-left">
+      <div class="abst-checkbox" id="abst-chk"></div>
+      <div>
+        <div class="abstinence-name">Abstinence</div>
+        <div class="abstinence-sub">champignons décalés au lendemain pour le weed</div>
+      </div>
+    </div>
+    <div class="abstinence-reward">
+      <span style="color:var(--orange-brule)" id="abst-champ-lbl">+35 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></span>
+      <span style="color:var(--moutarde)" id="abst-glands-lbl">+20 <svg width="11" height="13" viewBox="0 0 24 28" fill="none" style="vertical-align:-1px;display:inline-block"><ellipse cx="12" cy="18" rx="7" ry="8" fill="#6b8e4e"/><path d="M5 12 Q5 8 12 7 Q19 8 19 12 L19 14 Q12 16 5 14 Z" fill="#8a6d2c"/><path d="M12 4 Q11 6 11 7" stroke="#6b5524" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+    </div>
+  </div>
+  <div class="streak-mini">Streak : <strong id="streak-today">0</strong> jour(s) consécutif(s)</div>
+
+  <div class="habits-row">
+    <div class="habit-column">
+      <div class="habit-column-title">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="currentColor"/><path d="M10 12 L10 20 Q10 22 12 22 Q14 22 14 20 L14 12 Z" fill="currentColor" opacity="0.5"/></svg>
+        Selfcare
+      </div>
+      <div id="list-selfcare"></div>
+      <button class="add-btn" onclick="openAddHabit('selfcare')">+ Ajouter une habitude</button>
+      <button class="add-btn" style="margin-top:4px;border-color:var(--border);color:var(--blanc-faded)" onclick="openEditHabits('selfcare')">✎ Modifier la liste</button>
+    </div>
+    <div class="habit-column">
+      <div class="habit-column-title resp">
+        <svg viewBox="0 0 24 28" fill="none"><ellipse cx="12" cy="18" rx="7" ry="8" fill="currentColor"/><path d="M5 12 Q5 8 12 7 Q19 8 19 12 L19 14 Q12 16 5 14 Z" fill="currentColor" opacity="0.6"/></svg>
+        Responsabilités
+      </div>
+      <div id="list-resp"></div>
+      <button class="add-btn" onclick="openAddHabit('resp')">+ Ajouter une habitude</button>
+      <button class="add-btn" style="margin-top:4px;border-color:var(--border);color:var(--blanc-faded)" onclick="openEditHabits('resp')">✎ Modifier la liste</button>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div>
+      <div class="section-title">Tâches du jour</div>
+      <div id="list-taches"></div>
+      <button class="add-btn" onclick="openAddTache()">+ Ajouter une tâche</button>
+    </div>
+    <div>
+      <div class="section-title">Notes</div>
+      <textarea class="notes-area" id="notes-area" placeholder="Pensées libres du jour…" onchange="saveNotes(this.value)" oninput="saveNotes(this.value)"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROGRESSION ===== -->
+<div id="panel-progression" class="panel">
+  <div class="prog-hero">
+    <div class="prog-stat">
+      <div class="big orange" id="pr-streak">0</div>
+      <div class="lbl">Jours d'abstinence consécutifs</div>
+    </div>
+    <div class="prog-stat">
+      <div class="big gold" id="pr-record">0</div>
+      <div class="lbl">Record d'abstinence</div>
+    </div>
+  </div>
+  <div class="prog-totals">
+    <div class="prog-total-card">
+      <div class="val gold" id="pr-glands">0</div>
+      <div class="sub"><svg width="11" height="13" viewBox="0 0 24 28" fill="none" style="vertical-align:-1px;display:inline-block"><ellipse cx="12" cy="18" rx="7" ry="8" fill="#6b8e4e"/><path d="M5 12 Q5 8 12 7 Q19 8 19 12 L19 14 Q12 16 5 14 Z" fill="#8a6d2c"/><path d="M12 4 Q11 6 11 7" stroke="#6b5524" stroke-width="1.5" stroke-linecap="round"/></svg> Glands cumulés</div>
+    </div>
+    <div class="prog-total-card">
+      <div class="val orange" id="pr-champ">0</div>
+      <div class="sub"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg> Champignons gagnés</div>
+    </div>
+  </div>
+  <div class="level-card" style="margin-bottom:20px">
+    <div class="level-row">
+      <div class="level-name"><span class="num" id="pr-lv-num">Niveau 1</span><span class="title" id="pr-lv-title">Paysanne</span></div>
+      <div class="xp-progress-text" id="pr-lv-text"></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="pr-lv-fill" style="width:0%"></div></div>
+  </div>
+  <div class="section-title">Engagement</div>
+  <div id="engagement-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;"></div>
+  <div class="section-title">Récompenses utilisées</div>
+  <div class="used-list" id="used-list"><div style="color:var(--blanc-faded);font-size:14px;padding:8px 0;">Aucune récompense échangée pour l'instant.</div></div>
+</div>
+
+<!-- ===== RÉCOMPENSES ===== -->
+<div id="panel-recompenses" class="panel">
+  <div class="rew-header">
+    <div class="counter-card" style="justify-content:center;text-align:center;">
+      <div>
+        <div class="counter-label"><svg width="11" height="13" viewBox="0 0 24 28" fill="none" style="vertical-align:-1px;display:inline-block"><ellipse cx="12" cy="18" rx="7" ry="8" fill="#6b8e4e"/><path d="M5 12 Q5 8 12 7 Q19 8 19 12 L19 14 Q12 16 5 14 Z" fill="#8a6d2c"/><path d="M12 4 Q11 6 11 7" stroke="#6b5524" stroke-width="1.5" stroke-linecap="round"/></svg> Glands (info)</div>
+        <div class="counter-value gold" style="justify-content:center"><span id="rw-glands">0</span></div>
+      </div>
+    </div>
+    <div class="counter-card" style="justify-content:center;text-align:center;">
+      <div>
+        <div class="counter-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg> Champignons disponibles</div>
+        <div class="counter-value orange" style="justify-content:center"><span id="rw-champ">0</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="section-title" style="justify-content:space-between">
+    <span>Récompenses disponibles</span>
+    <span style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <button class="add-btn" id="rew-add-header-btn" onclick="showAddForm()" style="display:none">+ Nouvelle récompense</button>
+      <button class="edit-done-btn" id="edit-done-btn" onclick="toggleEditMode()" style="display:none">Terminer</button>
+      <button class="edit-mode-btn" id="edit-mode-btn" onclick="toggleEditMode()" title="Mode édition">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>
+      </button>
+    </span>
+  </div>
+  <div class="rewards-grid" id="rw-available"></div>
+  <div class="rewards-grid" id="rw-locked" style="display:none"></div>
+  <div id="rew-edit-actions" style="display:none;margin-top:8px">
+    <button class="add-btn" id="rew-add-trigger" onclick="showAddForm()">+ Ajouter une récompense</button>
+    <div id="rew-add-form" class="add-reward-form" style="display:none">
+      <div class="modal-field"><label>Nom de la récompense</label><input type="text" id="rew-new-name" placeholder="Nom de la récompense"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="modal-field"><label>Coût <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></label><input type="number" id="rew-new-cost" value="100" min="1"></div>
+        <div class="modal-field"><label>Niveau requis</label><select id="rew-new-niv"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-primary" onclick="addRewardInline()">Créer</button>
+        <button class="btn-ghost" onclick="hideAddForm()">Annuler</button>
+      </div>
+    </div>
+  </div>
+  <div class="section-title" style="color:var(--orange-brule)">Indulgence</div>
+  <div style="max-width:280px">
+    <div class="reward-card" id="weed-indulgence-card" style="border-style:dashed;border-color:rgba(184,92,42,0.4)">
+      <div class="reward-name">Weed</div>
+      <div style="font-size:12px;color:var(--blanc-faded);margin-bottom:6px">Quantité (g)</div>
+      <input type="number" id="weed-ind-qty" class="time-input" min="0" step="0.5" placeholder="0" oninput="updateWeedIndCost()">
+      <div id="weed-ind-cost" style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ocre);margin-top:6px;">—</div>
+      <button class="buy-btn" id="weed-ind-btn" onclick="buyWeedIndulgence()">Acheter</button>
+      <div id="weed-ind-msg" style="font-size:12px;color:var(--orange-brule);margin-top:6px;font-style:italic;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NIVEAUX ===== -->
+<div id="panel-niveaux" class="panel">
+  <div class="section-title">Système de niveaux</div>
+  <div id="lv-list"></div>
+</div>
+
+<!-- ===== HISTORIQUE ===== -->
+<div id="panel-historique" class="panel">
+  <div class="hist-controls" id="month-selector"></div>
+  <div class="chart-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#a67c3a"></div>Sommeil</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c9a227"></div>Mood</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6b8e4e"></div>Productivité</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#b85c2a"></div>Rendement</div>
+  </div>
+  <div id="charts-container"></div>
+</div>
+
+</div><!-- /container -->
+
+<!-- MODALS -->
+<div class="overlay" id="ov-confirm">
+  <div class="modal">
+    <div class="modal-title" id="confirm-title">Confirmer</div>
+    <div class="modal-body" id="confirm-body"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay('ov-confirm')">Annuler</button>
+      <button class="btn-primary" id="confirm-ok">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-habit">
+  <div class="modal">
+    <div class="modal-title" id="habit-modal-title">Ajouter une habitude</div>
+    <div class="modal-field"><label>Nom</label><input type="text" id="new-habit-name" placeholder="Ex : Marche 30 min"></div>
+    <div class="modal-field"><label>Type</label><select id="new-habit-type"><option value="selfcare">Selfcare (champignons seulement)</option><option value="resp">Responsabilité (champignons + glands)</option></select></div>
+    <div class="modal-field"><label>Valeur en points</label><input type="number" id="new-habit-val" value="10" min="1"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay('ov-habit')">Annuler</button>
+      <button class="btn-primary" onclick="saveNewHabit()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-tache">
+  <div class="modal">
+    <div class="modal-title">Ajouter une tâche</div>
+    <div class="modal-field"><label>Nom</label><input type="text" id="new-tache-name" placeholder="Ex : Appeler dentiste"></div>
+    <div class="modal-field"><label>Type</label><select id="new-tache-type"><option value="selfcare">Selfcare (champignons seulement)</option><option value="resp">Responsabilité (champignons + glands)</option></select></div>
+    <div class="modal-field"><label>Valeur en points</label><input type="number" id="new-tache-val" value="10" min="1"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay('ov-tache')">Annuler</button>
+      <button class="btn-primary" onclick="saveNewTache()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-edit-rewards">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title">Modifier les récompenses</div>
+    <div id="edit-rewards-list" style="max-height:300px;overflow-y:auto;margin-bottom:14px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:13px;color:var(--blanc-faded);margin-bottom:10px">Ajouter une récompense</div>
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end">
+        <div class="modal-field" style="margin:0"><label>Nom</label><input type="text" id="new-rew-name" placeholder="Nom"></div>
+        <div class="modal-field" style="margin:0"><label>Coût <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></label><input type="number" id="new-rew-cost" value="100" min="1" style="width:90px"></div>
+        <div class="modal-field" style="margin:0"><label>Niv. requis</label><input type="number" id="new-rew-niv" value="1" min="1" max="10" style="width:70px"></div>
+      </div>
+      <button class="btn-primary" style="margin-top:10px;width:100%" onclick="addNewReward()">Ajouter</button>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn-ghost" onclick="closeOverlay('ov-edit-rewards')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-edit-habits">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title" id="edit-habits-title">Modifier la liste</div>
+    <div id="edit-habits-list" style="max-height:380px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeOverlay('ov-edit-habits')">Fermer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-settings">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">Paramètres</div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:5px">Heure de bascule de journée (h)</label>
+      <input type="number" id="set-bascule" min="0" max="12" style="width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:3px;padding:8px 10px;color:var(--blanc-casse);font-family:'JetBrains Mono',monospace;font-size:15px">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">Seuils de rendement (champignons / niveau)</label>
+      <div id="seuils-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay('ov-settings')">Annuler</button>
+      <button class="btn-primary" onclick="saveSettings()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="settings-bar">
+  <button class="settings-btn" onclick="exportData()">⬇ Exporter JSON</button>
+  <button class="settings-btn" onclick="document.getElementById('import-file').click()">⬆ Importer JSON</button>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+  <button class="settings-btn" onclick="openSettings()">⚙ Paramètres</button>
+  <button class="settings-btn danger" onclick="confirmReset()">✕ Réinitialiser</button>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const LEVELS_DATA = [
+  {n:1,  title:'Paysanne',    xp:0},
+  {n:2,  title:'Artisane',    xp:250},
+  {n:3,  title:'Bourgeoise',  xp:650},
+  {n:4,  title:'Demoiselle',  xp:1250},
+  {n:5,  title:'Dame',        xp:2100},
+  {n:6,  title:'Vicomtesse',  xp:3300},
+  {n:7,  title:'Comtesse',    xp:4900},
+  {n:8,  title:'Duchesse',    xp:7000},
+  {n:9,  title:'Reine',       xp:9800},
+  {n:10, title:'Impératrice', xp:13500},
+];
+
+const ABST_TABLE = [
+  {champ:35, glands:20}, {champ:45, glands:25}, {champ:60, glands:35},
+  {champ:80, glands:45}, {champ:105,glands:60}, {champ:135,glands:75},
+  {champ:170,glands:95}, {champ:210,glands:120},{champ:260,glands:150},{champ:320,glands:180},
+];
+
+const SELFCARE_DEFS = [
+  {id:'swim',     name:'Nager',               pts:10},
+  {id:'exercise', name:'Exercice physique',    pts:20},
+  {id:'shower',   name:'Shower',               pts:10},
+  {id:'eshower',  name:'Everything shower',    pts:20},
+  {id:'breakfast',name:'Manger déjeuner',      pts:20, isMeal:true},
+  {id:'lunch',    name:'Manger dîner',         pts:10, isMeal:true},
+  {id:'dinner',   name:'Manger souper',        pts:5,  isMeal:true},
+  {id:'pedicure', name:'Pédicure maison',      pts:10},
+  {id:'manicure', name:'Manucure maison',      pts:5},
+  {id:'slp_mid',  name:'Coucher avant minuit', pts:5,  excl:'slp_22'},
+  {id:'slp_22',   name:'Coucher à 22h',        pts:20, excl:'slp_mid'},
+  {id:'wk_noon',  name:'Lever avant midi',     pts:5,  excl:'wk_10'},
+  {id:'wk_10',    name:'Lever avant 10h',      pts:20, excl:'wk_noon'},
+  {id:'journal',  name:'Journaling',           pts:10},
+  {id:'meditate', name:'Méditation',           pts:20},
+];
+
+const RESP_DEFS = [
+  {id:'sink',     name:'Laver évier salle de bain',    pts:5},
+  {id:'toilet',   name:'Laver la toilette',            pts:10},
+  {id:'shower_cl',name:'Laver la douche',              pts:20},
+  {id:'laveuse',  name:'Laveuse',                      pts:5},
+  {id:'secheuse', name:'Sécheuse',                     pts:5},
+  {id:'rangerlav',name:'Ranger lavage',                pts:10},
+  {id:'dishes',   name:'Laver vaisselle',              pts:20},
+  {id:'dishwash', name:'Remplir/vider lave-vaisselle', pts:5},
+  {id:'litter',   name:'Litière distributeur',         pts:10},
+  {id:'paper',    name:'Paperasse',                    pts:20},
+  {id:'jobs',     name:'Recherche emplois',            pts:20},
+  {id:'research', name:'Recherche',                    pts:5},
+  // Écriture est auto depuis nb_mots
+];
+
+const IC_CHAMP = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg>`;
+const IC_GLAND = `<svg width="11" height="13" viewBox="0 0 24 28" fill="none" style="vertical-align:-1px;display:inline-block"><ellipse cx="12" cy="18" rx="7" ry="8" fill="#6b8e4e"/><path d="M5 12 Q5 8 12 7 Q19 8 19 12 L19 14 Q12 16 5 14 Z" fill="#8a6d2c"/><path d="M12 4 Q11 6 11 7" stroke="#6b5524" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+
+const DEFAULT_REWARDS = [
+  {id:'book',   name:'Livre / Média',  cost:100, niveau:1},
+  {id:'pastry', name:'Pâtisserie',     cost:150, niveau:1},
+  {id:'spa',    name:'Spa',            cost:200, niveau:1},
+  {id:'resto',  name:'Restaurant',     cost:300, niveau:1},
+  {id:'crack',  name:'Crackpot Café',  cost:400, niveau:1},
+  {id:'dayoff', name:'Journée off',    cost:500, niveau:1},
+];
+
+const HIST_DATA = [];
+
+// ============================================================
+// STATE
+// ============================================================
+let S = {
+  glands: 0,
+  champTotal: 0,
+  champDispo: 0,
+  champDecalesWeed: 0,
+  champDecalesDate: null,
+  journal: {},
+  customSelfcare: [],
+  customResp: [],
+  rewards: JSON.parse(JSON.stringify(DEFAULT_REWARDS)),
+  recompensesAchetees: [],
+  heure_bascule: 5,
+  seuils_rendement: [120,140,165,195,230,270,315,365,420,480],
+  habitDisabled: {},
+  habitOverrides: {},
+  weedPurchases: [],
+  cycle_debut: null,
+};
+
+let dateAffichee = null;
+let recompensesEditMode = false;
+
+function save() { localStorage.setItem('tracker-v2', JSON.stringify(S)); }
+function load() {
+  const raw = localStorage.getItem('tracker-v2');
+  if (raw) try { S = JSON.parse(raw); } catch(e) {}
+  if (!S.heure_bascule) S.heure_bascule = 5;
+  if (!S.seuils_rendement) S.seuils_rendement = [120,140,165,195,230,270,315,365,420,480];
+  if (!S.habitDisabled) S.habitDisabled = {};
+  if (!S.habitOverrides) S.habitOverrides = {};
+  if (!S.weedPurchases) S.weedPurchases = [];
+  if (!('cycle_debut' in S)) S.cycle_debut = null;
+  if (S.cycle_debut) {
+    let migrated = false;
+    Object.entries(S.journal).forEach(([date, lg]) => {
+      if (!lg.cycle_jour && date >= S.cycle_debut) {
+        const d1 = new Date(S.cycle_debut + 'T12:00:00');
+        const d2 = new Date(date + 'T12:00:00');
+        lg.cycle_jour = Math.round((d2 - d1) / 86400000) + 1;
+        migrated = true;
+      }
+    });
+    if (migrated) localStorage.setItem('tracker-v2', JSON.stringify(S));
+  }
+  if (!S.rewards) S.rewards = JSON.parse(JSON.stringify(DEFAULT_REWARDS));
+  (S.recompensesAchetees || []).forEach(a => {
+    if (!a.nom_au_moment && a.id !== 'weed') {
+      const r = (S.rewards || []).find(x => x.id === a.id);
+      a.nom_au_moment = r ? r.name : (a.name || 'Récompense supprimée');
+    }
+  });
+}
+
+function getActiveDate() {
+  const now = new Date();
+  if (now.getHours() < (S.heure_bascule || 5)) now.setDate(now.getDate() - 1);
+  return now.toISOString().slice(0,10);
+}
+
+function today() { return getActiveDate(); }
+
+function getLog(d) {
+  if (!S.journal[d]) {
+    S.journal[d] = {
+      cycle_jour:1, coucher:'', reveil:'', sommeil:null,
+      mood:null, productivite:null, work:0, nb_mots:0, weed:0,
+      habitudes:[], remede:[], abstinence:false, abst_champ:0,
+      taches:[], notes:'', glands_gagnes:0, champ_gagnes:0, rendement:null,
+    };
+  }
+  return S.journal[d];
+}
+
+function habitIsChecked(log, id) {
+  return log.habitudes.some(h => (typeof h==='string'?h:h.id)===id);
+}
+function habitCheck(log, id, pts, xp) { log.habitudes.push({id,pts,xp}); }
+function habitUncheck(log, id) { log.habitudes = log.habitudes.filter(h=>(typeof h==='string'?h:h.id)!==id); }
+function habitStoredPts(log, id) { const h=log.habitudes.find(h=>typeof h!=='string'&&h.id===id); return h?h.pts:null; }
+function getHabitPts(h) { const ov=S.habitOverrides[h.id]; return (ov&&ov.pts!==undefined)?ov.pts:h.pts; }
+function getHabitName(h) { const ov=S.habitOverrides[h.id]; return (ov&&ov.name)?ov.name:h.name; }
+function isHabitActive(id) { return !S.habitDisabled[id]; }
+function isFilledDay(log) {
+  if (!log) return false;
+  return (log.mood!=null||log.productivite!=null||log.sommeil!=null||
+    (log.nb_mots>0)||(log.habitudes&&log.habitudes.length>0)||
+    (log.remede&&log.remede.length>0)||log.abstinence||
+    (log.taches&&log.taches.length>0)||(log.notes&&log.notes.trim()));
+}
+
+function getLevel() {
+  let lv = LEVELS_DATA[0];
+  for (const l of LEVELS_DATA) { if (S.glands >= l.xp) lv = l; else break; }
+  return lv;
+}
+
+function getNextLevel(lv) { return LEVELS_DATA.find(l => l.n === lv.n + 1) || null; }
+
+function weedCost() { return ABST_TABLE[getLevel().n - 1].champ; }
+function abstReward() { return ABST_TABLE[getLevel().n - 1]; }
+
+function writingTier(mots) {
+  if (mots >= 1000) return 30;
+  if (mots >= 500)  return 20;
+  if (mots >= 100)  return 10;
+  return 0;
+}
+
+function decToHHMM(dec) {
+  if (dec === null || dec === undefined) return '';
+  const h = Math.floor(dec);
+  const m = Math.round((dec - h) * 60);
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+
+function HHMMtoDec(hhmm) {
+  if (!hhmm) return null;
+  const [h,m] = hhmm.split(':').map(Number);
+  return h + m / 60;
+}
+
+function formatSommeil(dec) {
+  if (dec === null || dec === undefined || dec <= 0) return '—';
+  const h = Math.floor(dec);
+  const m = Math.round((dec - h) * 60);
+  return m > 0 ? `${h} h ${String(m).padStart(2,'0')}` : `${h} h`;
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function frDate(d) {
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('fr-CA', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+}
+
+function shortMonth(ym) {
+  const dt = new Date(ym.slice(0,7) + '-01T12:00:00');
+  return dt.toLocaleDateString('fr-CA', {month:'long', year:'numeric'});
+}
+function calcRendement(champ) {
+  const lv = getLevel();
+  const seuil = (S.seuils_rendement||[120,140,165,195,230,270,315,365,420,480])[lv.n-1];
+  return Math.min(10, Math.round(champ/seuil*100)/10);
+}
+function storeRendement(d) {
+  const log = S.journal[d]; if (!log) return;
+  log.rendement = calcRendement(log.champ_gagnes||0);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function preloadHistorical() {
+  HIST_DATA.forEach(entry => {
+    if (!S.journal[entry.date]) {
+      S.journal[entry.date] = {
+        cycle_jour: entry.cycle_jour || 1,
+        coucher: decToHHMM(entry.coucher),
+        reveil: decToHHMM(entry.reveil),
+        sommeil: entry.sommeil || null,
+        mood: entry.mood || null,
+        productivite: entry.productivite || null,
+        work: entry.work || 0,
+        nb_mots: entry.nb_mots || 0,
+        weed: entry.weed || 0,
+        weed_cost_paid: 0,
+        habitudes: [], remede: [], abstinence: false, abst_champ: 0,
+        taches: [], notes: entry.notes || '',
+        glands_gagnes: 0, champ_gagnes: 0,
+        historical: true,
+      };
+    }
+  });
+}
+
+function initToday() {
+  const t = today();
+  if (S.journal[t]) return;
+
+  S.journal[t] = {
+    cycle_jour: getCycleJour(t),
+    coucher:'', reveil:'', sommeil:null,
+    mood:null, productivite:null, work:0, nb_mots:0, weed:0, weed_cost_paid:0,
+    habitudes:[], remede:[], abstinence:false, abst_champ:0,
+    taches:[], notes:'', glands_gagnes:0, champ_gagnes:0,
+  };
+}
+
+function flushDecales() {
+  if (S.champDecalesDate && S.champDecalesDate < today()) {
+    S.champDecalesWeed = 0;
+    S.champDecalesDate = null;
+  }
+}
+
+// ============================================================
+// STREAK
+// ============================================================
+function calcStreak() {
+  let count = 0;
+  const d = new Date(getActiveDate() + 'T12:00:00');
+  while (true) {
+    const ds = d.toISOString().slice(0,10);
+    if (S.journal[ds] && S.journal[ds].abstinence) { count++; d.setDate(d.getDate()-1); }
+    else break;
+    if (count > 3650) break;
+  }
+  return count;
+}
+
+function calcRecord() {
+  const dates = Object.keys(S.journal).sort();
+  let max = 0, cur = 0;
+  let prev = null;
+  for (const d of dates) {
+    if (S.journal[d].abstinence) {
+      if (prev) {
+        const p = new Date(prev+'T12:00:00'); const c = new Date(d+'T12:00:00');
+        const diff = (c - p) / 86400000;
+        cur = diff === 1 ? cur + 1 : 1;
+      } else { cur = 1; }
+      if (cur > max) max = cur;
+      prev = d;
+    } else { prev = null; cur = 0; }
+  }
+  return max;
+}
+
+// ============================================================
+// ACTIONS — TODAY
+// ============================================================
+function isFuture() {
+  const act = getActiveDate();
+  const next = new Date(act+'T12:00:00'); next.setDate(next.getDate()+1);
+  return dateAffichee > act && dateAffichee <= next.toISOString().slice(0,10);
+}
+function isPast() { return dateAffichee < getActiveDate(); }
+function isToday() { return dateAffichee === getActiveDate(); }
+
+function getCycleJour(dateStr) {
+  if (S.cycle_debut && dateStr >= S.cycle_debut) {
+    const d1 = new Date(S.cycle_debut + 'T12:00:00');
+    const d2 = new Date(dateStr + 'T12:00:00');
+    return Math.round((d2 - d1) / 86400000) + 1;
+  }
+  const log = S.journal[dateStr];
+  return log ? (log.cycle_jour || 1) : 1;
+}
+function adjCycle(delta) {
+  if (!S.cycle_debut) S.cycle_debut = dateAffichee;
+  const d = new Date(S.cycle_debut + 'T12:00:00');
+  d.setDate(d.getDate() - delta);
+  S.cycle_debut = d.toISOString().slice(0, 10);
+  getLog(dateAffichee).cycle_jour = getCycleJour(dateAffichee);
+  save(); renderToday();
+}
+function resetCycle() {
+  S.cycle_debut = dateAffichee;
+  getLog(dateAffichee).cycle_jour = 1;
+  save(); renderToday();
+}
+function calcSommeil() {
+  if (isFuture()) return;
+  const log = getLog(dateAffichee);
+  const c = document.getElementById('sl-coucher').value;
+  const r = document.getElementById('sl-reveil').value;
+  if (!c || !r) { log.coucher=c; log.reveil=r; save(); return; }
+  let cd=HHMMtoDec(c), rd=HHMMtoDec(r);
+  if (rd<=cd) rd+=24;
+  log.coucher=c; log.reveil=r; log.sommeil=Math.round((rd-cd)*100)/100;
+  document.getElementById('sl-result').textContent=formatSommeil(log.sommeil);
+  save();
+}
+function saveTracker(field, val) {
+  if (isFuture()) return;
+  const log=getLog(dateAffichee);
+  log[field]=val===''?null:parseFloat(val);
+  save();
+}
+function updateMots(val) {
+  if (isFuture()) return;
+  const log=getLog(dateAffichee);
+  const mots=parseInt(val)||0;
+  const diff=writingTier(mots)-writingTier(log.nb_mots||0);
+  if (diff!==0) { log.glands_gagnes+=diff; log.champ_gagnes+=diff; S.glands+=diff; S.champTotal+=diff; S.champDispo+=diff; }
+  log.nb_mots=mots;
+  storeRendement(dateAffichee);
+  save(); renderToday();
+}
+function updateWeed(val) {
+  if (isFuture()) return;
+  const log=getLog(dateAffichee);
+  log.weed=parseFloat(val)||0;
+  save();
+}
+function toggleHabit(id, type) {
+  if (isFuture()) return;
+  const log=getLog(dateAffichee);
+  const isDone=habitIsChecked(log,id);
+  if (type==='selfcare') {
+    const def=[...SELFCARE_DEFS,...S.customSelfcare].find(h=>h.id===id);
+    if (!def||!isHabitActive(id)) return;
+    const pts=getHabitPts(def);
+    if (def.excl && !isDone && habitIsChecked(log,def.excl)) {
+      const ex=SELFCARE_DEFS.find(h=>h.id===def.excl);
+      if (ex) { const ep=habitStoredPts(log,def.excl)??getHabitPts(ex); habitUncheck(log,def.excl); log.champ_gagnes-=ep; S.champTotal-=ep; S.champDispo-=ep; }
+    }
+    if (isDone) {
+      const sp=habitStoredPts(log,id)??pts; habitUncheck(log,id);
+      log.champ_gagnes-=sp; S.champTotal-=sp; S.champDispo-=sp;
+    } else {
+      habitCheck(log,id,pts,0); log.champ_gagnes+=pts; S.champTotal+=pts; S.champDispo+=pts;
+      if (def.isMeal && !log.remede.includes('manger')) { log.remede.push('manger'); log.champ_gagnes+=5; S.champTotal+=5; S.champDispo+=5; }
+      toast(`+${pts} ${IC_CHAMP}`);
+    }
+  } else if (type==='resp') {
+    const def=[...RESP_DEFS,...S.customResp].find(h=>h.id===id);
+    if (!def||!isHabitActive(id)) return;
+    const pts=getHabitPts(def);
+    if (isDone) {
+      const sp=habitStoredPts(log,id)??pts; habitUncheck(log,id);
+      log.champ_gagnes-=sp; log.glands_gagnes-=sp; S.champTotal-=sp; S.champDispo-=sp; S.glands-=sp;
+    } else {
+      habitCheck(log,id,pts,pts); log.champ_gagnes+=pts; log.glands_gagnes+=pts;
+      S.champTotal+=pts; S.champDispo+=pts; S.glands+=pts;
+      toast(`+${pts} ${IC_CHAMP}  +${pts} ${IC_GLAND}`);
+    }
+  }
+  storeRendement(dateAffichee);
+  save(); renderToday();
+}
+function toggleRemede(id) {
+  if (isFuture()) return;
+  const log=getLog(dateAffichee);
+  const done=log.remede.includes(id);
+  if (done) { log.remede=log.remede.filter(x=>x!==id); log.champ_gagnes-=5; S.champTotal-=5; S.champDispo-=5; }
+  else { log.remede.push(id); log.champ_gagnes+=5; S.champTotal+=5; S.champDispo+=5; toast(`+5 ${IC_CHAMP}`); }
+  storeRendement(dateAffichee);
+  save(); renderToday();
+}
+function toggleAbst() {
+  if (isFuture()) return;
+  const log=getLog(dateAffichee);
+  const rew=abstReward();
+  if (log.abstinence) {
+    log.abstinence=false; log.champ_gagnes-=rew.champ; log.glands_gagnes-=rew.glands;
+    S.champTotal-=rew.champ; S.champDispo-=rew.champ; S.glands-=rew.glands; log.abst_champ=0;
+  } else {
+    log.abstinence=true; log.abst_champ=rew.champ; log.champ_gagnes+=rew.champ; log.glands_gagnes+=rew.glands;
+    S.champTotal+=rew.champ; S.champDispo+=rew.champ; S.glands+=rew.glands;
+    toast(`Abstinence ! +${rew.champ} ${IC_CHAMP}  +${rew.glands} ${IC_GLAND}`);
+  }
+  storeRendement(dateAffichee);
+  save(); renderToday();
+}
+function toggleTache(idx) {
+  const log=getLog(dateAffichee);
+  const t=log.taches[idx]; if(!t) return;
+  if (t.cochee) {
+    t.cochee=false; log.champ_gagnes-=t.valeur; S.champTotal-=t.valeur; S.champDispo-=t.valeur;
+    if (t.type==='resp') { log.glands_gagnes-=t.valeur; S.glands-=t.valeur; }
+  } else {
+    t.cochee=true; log.champ_gagnes+=t.valeur; S.champTotal+=t.valeur; S.champDispo+=t.valeur;
+    if (t.type==='resp') { log.glands_gagnes+=t.valeur; S.glands+=t.valeur; }
+    toast(`+${t.valeur} ${IC_CHAMP}${t.type==='resp'?'  +'+t.valeur+' '+IC_GLAND:''}`);
+  }
+  storeRendement(dateAffichee);
+  save(); renderToday();
+}
+function deleteTache(idx) {
+  const log=getLog(dateAffichee);
+  const t=log.taches[idx];
+  if (t&&t.cochee) { log.champ_gagnes-=t.valeur; S.champTotal-=t.valeur; S.champDispo-=t.valeur; if(t.type==='resp'){log.glands_gagnes-=t.valeur;S.glands-=t.valeur;} }
+  log.taches.splice(idx,1);
+  save(); renderToday();
+}
+function saveNotes(val) {
+  if (isFuture()) return;
+  getLog(dateAffichee).notes=val; save();
+}
+
+// ============================================================
+// CUSTOM HABITS
+// ============================================================
+let habitModalType = 'selfcare';
+
+function openAddHabit(type) {
+  habitModalType = type;
+  document.getElementById('habit-modal-title').textContent = type === 'selfcare' ? 'Ajouter une habitude Selfcare' : 'Ajouter une habitude Responsabilité';
+  document.getElementById('new-habit-type').value = type;
+  document.getElementById('new-habit-name').value = '';
+  document.getElementById('new-habit-val').value = '10';
+  document.getElementById('ov-habit').classList.add('show');
+}
+
+function saveNewHabit() {
+  const name = document.getElementById('new-habit-name').value.trim();
+  const type = document.getElementById('new-habit-type').value;
+  const pts = parseInt(document.getElementById('new-habit-val').value) || 10;
+  if (!name) return;
+  const id = 'custom_' + Date.now();
+  if (type === 'selfcare') S.customSelfcare.push({id, name, pts});
+  else S.customResp.push({id, name, pts});
+  closeOverlay('ov-habit');
+  save(); renderToday();
+}
+
+function deleteCustomHabit(id, type) {
+  // Uncheck if checked today
+  const log = getLog(today());
+  if (log.habitudes.includes(id)) toggleHabit(id, type);
+  if (type === 'selfcare') S.customSelfcare = S.customSelfcare.filter(h => h.id !== id);
+  else S.customResp = S.customResp.filter(h => h.id !== id);
+  save(); renderToday();
+}
+
+// ============================================================
+// TASKS
+// ============================================================
+function openAddTache() {
+  document.getElementById('new-tache-name').value = '';
+  document.getElementById('new-tache-val').value = '10';
+  document.getElementById('ov-tache').classList.add('show');
+}
+
+function saveNewTache() {
+  const name=document.getElementById('new-tache-name').value.trim();
+  const type=document.getElementById('new-tache-type').value;
+  const valeur=parseInt(document.getElementById('new-tache-val').value)||10;
+  if (!name) return;
+  getLog(dateAffichee).taches.push({id:'t'+Date.now(),name,type,valeur,cochee:false});
+  closeOverlay('ov-tache');
+  save(); renderToday();
+}
+
+// ============================================================
+// NAVIGATION TEMPORELLE
+// ============================================================
+function navDay(delta) {
+  const cur=new Date(dateAffichee+'T12:00:00');
+  cur.setDate(cur.getDate()+delta);
+  const target=cur.toISOString().slice(0,10);
+  const act=getActiveDate();
+  const maxD=new Date(act+'T12:00:00'); maxD.setDate(maxD.getDate()+1);
+  const max=maxD.toISOString().slice(0,10);
+  if (target>max) return;
+  dateAffichee=target;
+  renderToday();
+}
+function navToday() { dateAffichee=getActiveDate(); renderToday(); }
+
+let calMonth = null;
+function openCalendar() {
+  calMonth = new Date(dateAffichee+'T12:00:00'); calMonth.setDate(1);
+  renderCalendar();
+  document.getElementById('cal-popup').style.display='block';
+  document.getElementById('cal-overlay').style.display='block';
+}
+function closeCalendar() {
+  document.getElementById('cal-popup').style.display='none';
+  document.getElementById('cal-overlay').style.display='none';
+}
+function calPrevMonth() { calMonth.setMonth(calMonth.getMonth()-1); renderCalendar(); }
+function calNextMonth() { calMonth.setMonth(calMonth.getMonth()+1); renderCalendar(); }
+function selectDate(d) {
+  const act=getActiveDate();
+  const maxD=new Date(act+'T12:00:00'); maxD.setDate(maxD.getDate()+1);
+  const max=maxD.toISOString().slice(0,10);
+  if (d>max) return;
+  dateAffichee=d; closeCalendar(); renderToday();
+}
+function renderCalendar() {
+  const y=calMonth.getFullYear(), m=calMonth.getMonth();
+  const act=getActiveDate();
+  const maxD=new Date(act+'T12:00:00'); maxD.setDate(maxD.getDate()+1);
+  const max=maxD.toISOString().slice(0,10);
+  const first=new Date(y,m,1), last=new Date(y,m+1,0);
+  const mName=calMonth.toLocaleDateString('fr-CA',{month:'long',year:'numeric'});
+  let s=(first.getDay()+6)%7;
+  let html=`<div class="cal-header"><button onclick="calPrevMonth()">◀</button><span>${mName}</span><button onclick="calNextMonth()">▶</button></div><div class="cal-grid">`;
+  ['Lu','Ma','Me','Je','Ve','Sa','Di'].forEach(d=>html+=`<div class="cal-dow">${d}</div>`);
+  for(let i=0;i<s;i++) html+='<div></div>';
+  for(let d=1;d<=last.getDate();d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isAct=ds===act, isDisp=ds===dateAffichee, isDis=ds>max;
+    const hasDat=S.journal[ds]&&isFilledDay(S.journal[ds]);
+    let cls='cal-day';
+    if(!isDis) cls+=' cal-sel';
+    if(isAct) cls+=' cal-active';
+    if(isDisp) cls+=' cal-disp';
+    if(isDis) cls+=' cal-dis';
+    const op=hasDat?'':'opacity:0.55;';
+    const dot=hasDat?'<span class="cal-dot"></span>':'';
+    html+=`<div class="${cls}" style="${op}"${!isDis?` onclick="selectDate('${ds}')"`:''}>${d}${dot}</div>`;
+  }
+  html+='</div>';
+  document.getElementById('cal-popup').innerHTML=html;
+}
+
+// ============================================================
+// INDULGENCE WEED
+// ============================================================
+const WEED_COUTS=[35,45,60,80,105,135,170,210,260,320];
+function weedIndCost() { return WEED_COUTS[getLevel().n-1]; }
+function updateWeedIndCost() {
+  const qty=parseFloat(document.getElementById('weed-ind-qty').value)||0;
+  const cost=Math.round(qty*weedIndCost()*10)/10;
+  document.getElementById('weed-ind-cost').innerHTML=qty>0?`${cost} ${IC_CHAMP} (${weedIndCost()} ${IC_CHAMP}/g)`:'—';
+}
+function buyWeedIndulgence() {
+  const act=getActiveDate();
+  const actLog=S.journal[act];
+  const qty=parseFloat(document.getElementById('weed-ind-qty').value)||0;
+  if (qty<=0) { toast('Entrez une quantité.'); return; }
+  const cost=Math.round(qty*weedIndCost()*10)/10;
+  if (S.champDispo<cost) { toast('Pas assez de champignons !'); return; }
+  confirm_(`Acheter ${qty} g de weed ?`,`Coût : ${cost} ${IC_CHAMP} — Solde après : ${S.champDispo-cost}`,()=>{
+    S.champDispo-=cost;
+    S.weedPurchases.push({date:act,qty,cost});
+    const existing=S.recompensesAchetees.find(x=>x.id==='weed');
+    if (existing) existing.qty=(existing.qty||0)+qty;
+    else S.recompensesAchetees.push({id:'weed',name:'Weed',qty});
+    document.getElementById('weed-ind-qty').value='';
+    document.getElementById('weed-ind-cost').textContent='—';
+    save(); renderAll(); toast(`${qty} g acheté ! -${cost} ${IC_CHAMP}`);
+  });
+}
+
+// ============================================================
+// HABIT EDIT MODE
+// ============================================================
+let editHabitsType='selfcare';
+function openEditHabits(type) {
+  editHabitsType=type;
+  document.getElementById('edit-habits-title').textContent=type==='selfcare'?'Modifier — Selfcare':'Modifier — Responsabilités';
+  renderEditHabits();
+  document.getElementById('ov-edit-habits').classList.add('show');
+}
+function renderEditHabits() {
+  const defs=editHabitsType==='selfcare'?SELFCARE_DEFS:RESP_DEFS;
+  const customs=editHabitsType==='selfcare'?S.customSelfcare:S.customResp;
+  const all=[...defs,...customs];
+  const el=document.getElementById('edit-habits-list');
+  el.innerHTML='';
+  all.forEach(h=>{
+    const ov=S.habitOverrides[h.id]||{};
+    const disabled=!!S.habitDisabled[h.id];
+    const name=ov.name||h.name;
+    const pts=ov.pts!==undefined?ov.pts:h.pts;
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-soft)';
+    row.innerHTML=`
+      <span style="flex:1;font-size:14px;${disabled?'text-decoration:line-through;color:var(--blanc-faded)':''}">${name}</span>
+      <span style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--orange-brule)">${pts} ${IC_CHAMP}</span>
+      <button onclick="toggleHabitActive('${h.id}')" style="background:transparent;border:1px solid ${disabled?'var(--border)':'var(--vert-mousse)'};color:${disabled?'var(--blanc-faded)':'var(--vert-mousse)'};border-radius:20px;padding:2px 10px;font-size:11px;cursor:pointer;white-space:nowrap">
+        ${disabled?'Désactivée':'Active'}
+      </button>
+    `;
+    el.appendChild(row);
+  });
+}
+function toggleHabitActive(id) {
+  if (S.habitDisabled[id]) delete S.habitDisabled[id];
+  else S.habitDisabled[id]=true;
+  save(); renderEditHabits(); renderToday();
+}
+
+// ============================================================
+// PARAMÈTRES
+// ============================================================
+function openSettings() {
+  document.getElementById('set-bascule').value=S.heure_bascule||5;
+  const grid=document.getElementById('seuils-grid');
+  grid.innerHTML='';
+  (S.seuils_rendement||[120,140,165,195,230,270,315,365,420,480]).forEach((v,i)=>{
+    grid.innerHTML+=`<div style="text-align:center"><div style="font-size:10px;color:var(--blanc-faded);margin-bottom:3px">Niv.${i+1}</div><input type="number" id="seuil-${i}" value="${v}" style="width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:3px;padding:4px 6px;color:var(--blanc-casse);font-family:JetBrains Mono,monospace;font-size:12px"></div>`;
+  });
+  document.getElementById('ov-settings').classList.add('show');
+}
+function saveSettings() {
+  S.heure_bascule=parseInt(document.getElementById('set-bascule').value)||5;
+  S.seuils_rendement=Array.from({length:10},(_,i)=>parseInt(document.getElementById(`seuil-${i}`).value)||[120,140,165,195,230,270,315,365,420,480][i]);
+  closeOverlay('ov-settings');
+  save(); renderAll(); toast('Paramètres enregistrés.');
+}
+
+// ============================================================
+// REWARDS
+// ============================================================
+function buyReward(id) {
+  const r = S.rewards.find(x => x.id === id);
+  if (!r) return;
+  if (S.champDispo < r.cost) { toast('Pas assez de champignons !'); return; }
+  confirm_('Dépenser pour "' + r.name + '" ?', `Coût : ${r.cost} ${IC_CHAMP} — Solde après : ${S.champDispo - r.cost}`, () => {
+    S.champDispo -= r.cost;
+    const nomSnapshot = r.name;
+    const existing = S.recompensesAchetees.find(x => x.id === id);
+    if (existing) { existing.count++; existing.nom_au_moment = nomSnapshot; }
+    else S.recompensesAchetees.push({id, nom_au_moment: nomSnapshot, name: nomSnapshot, count:1, date:today()});
+    save(); renderAll();
+    toast('Récompense échangée ! ✨');
+  });
+}
+
+function toggleEditMode() {
+  if (recompensesEditMode) {
+    const nameEl = document.getElementById('rew-new-name');
+    if (nameEl && nameEl.value.trim()) {
+      if (!confirm('Vous avez une récompense non créée. Quitter le mode édition quand même ?')) return;
+    }
+    const formEl = document.getElementById('rew-add-form');
+    if (formEl) formEl.style.display = 'none';
+    const trigEl = document.getElementById('rew-add-trigger');
+    if (trigEl) trigEl.style.display = 'block';
+  }
+  recompensesEditMode = !recompensesEditMode;
+  save(); renderRecompenses();
+}
+
+function updateRewardField(i, field, value) {
+  const r = S.rewards[i];
+  if (!r) return;
+  if (field === 'name') { const v = value.trim(); if (v) r.name = v; }
+  else if (field === 'cost') { const v = parseInt(value); if (v > 0) r.cost = v; }
+  else if (field === 'niveau') { const v = parseInt(value); if (v >= 1 && v <= 10) r.niveau = v; }
+  save();
+}
+
+function deleteRewardInline(i) {
+  const r = S.rewards[i];
+  if (!r) return;
+  if (confirm(`Supprimer la récompense "${r.name}" ?`)) {
+    S.rewards.splice(i, 1);
+    save(); renderRecompenses();
+  }
+}
+
+function showAddForm() {
+  document.getElementById('rew-add-form').style.display = 'block';
+  document.getElementById('rew-add-trigger').style.display = 'none';
+  const h = document.getElementById('rew-add-header-btn');
+  if (h) h.style.display = 'none';
+  document.getElementById('rew-new-name').focus();
+}
+
+function hideAddForm() {
+  document.getElementById('rew-add-form').style.display = 'none';
+  document.getElementById('rew-add-trigger').style.display = 'block';
+  const h = document.getElementById('rew-add-header-btn');
+  if (h) h.style.display = 'inline-block';
+}
+
+function addRewardInline() {
+  const name = document.getElementById('rew-new-name').value.trim();
+  const cost = parseInt(document.getElementById('rew-new-cost').value) || 100;
+  const niveau = parseInt(document.getElementById('rew-new-niv').value) || 1;
+  if (!name) { document.getElementById('rew-new-name').focus(); return; }
+  if (cost < 1) return;
+  S.rewards.push({id:'custom_'+Date.now(), name, cost, niveau, personnalise:true});
+  document.getElementById('rew-new-name').value = '';
+  document.getElementById('rew-new-cost').value = '100';
+  document.getElementById('rew-new-niv').value = '1';
+  hideAddForm();
+  save(); renderRecompenses();
+  toast('Récompense ajoutée !');
+}
+
+function openEditRewards() {
+  renderEditRewards();
+  document.getElementById('ov-edit-rewards').classList.add('show');
+}
+
+function renderEditRewards() {
+  const el = document.getElementById('edit-rewards-list');
+  el.innerHTML = '';
+  S.rewards.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-soft)';
+    row.innerHTML = `<span style="flex:1;font-size:14px">${r.name}</span><span style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--moutarde)">${r.cost} ${IC_CHAMP}</span><span style="font-size:12px;color:var(--blanc-faded)">Niv ${r.niveau}</span><button onclick="deleteReward(${i})" style="background:none;border:none;color:var(--orange-brule);cursor:pointer;font-size:16px;">×</button>`;
+    el.appendChild(row);
+  });
+}
+
+function deleteReward(i) {
+  S.rewards.splice(i, 1);
+  save(); renderEditRewards(); renderRecompenses();
+}
+
+function addNewReward() {
+  const name = document.getElementById('new-rew-name').value.trim();
+  const cost = parseInt(document.getElementById('new-rew-cost').value) || 100;
+  const niveau = parseInt(document.getElementById('new-rew-niv').value) || 1;
+  if (!name) return;
+  S.rewards.push({id:'r_'+Date.now(), name, cost, niveau});
+  document.getElementById('new-rew-name').value = '';
+  save(); renderEditRewards(); renderRecompenses();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderAll() {
+  renderToday(); renderProgression(); renderRecompenses(); renderNiveaux(); renderHistorique();
+}
+
+function renderToday() {
+  const t = dateAffichee;
+  const act = getActiveDate();
+  const log = getLog(t);
+  const lv = getLevel();
+  const next = getNextLevel(lv);
+  const future = isFuture();
+  const past = isPast();
+
+  // Future banner
+  document.getElementById('future-banner').style.display = future ? 'block' : 'none';
+
+  // Nav next arrow
+  const maxD = new Date(act+'T12:00:00'); maxD.setDate(maxD.getDate()+1);
+  document.getElementById('nav-next-btn').disabled = t >= maxD.toISOString().slice(0,10);
+  document.getElementById('btn-aujourd-hui').style.display = (t !== act) ? 'inline-block' : 'none';
+  const dc = document.getElementById('date-clickable');
+  dc.className = 'date-clickable' + (past ? ' past' : '');
+
+  // Date + cycle
+  document.getElementById('date-full').textContent = frDate(t);
+  const cycleJour = getCycleJour(dateAffichee);
+  document.getElementById('cycle-label').textContent = 'jour ' + cycleJour + ' du cycle';
+  document.getElementById('cycle-num').textContent = cycleJour;
+
+  // Level bar
+  document.getElementById('lv-num').textContent = 'Niveau ' + lv.n;
+  document.getElementById('lv-title').textContent = lv.title;
+  if (next) {
+    const pct = Math.min(100, ((S.glands - lv.xp) / (next.xp - lv.xp)) * 100);
+    document.getElementById('lv-prog-fill').style.width = pct + '%';
+    document.getElementById('lv-prog-text').innerHTML = `<strong>${S.glands}</strong> / ${next.xp} ${IC_GLAND} · +${next.xp - S.glands} avant <em>${next.title}</em>`;
+  } else {
+    document.getElementById('lv-prog-fill').style.width = '100%';
+    document.getElementById('lv-prog-text').textContent = 'Niveau maximum atteint !';
+  }
+
+  // Counters
+  document.getElementById('glands-today').textContent = Math.round(log.glands_gagnes);
+  document.getElementById('glands-total').textContent = Math.round(S.glands);
+  document.getElementById('champ-today').textContent = Math.round(log.champ_gagnes);
+  document.getElementById('champ-dispo').textContent = Math.round(S.champDispo);
+
+  // Sommeil
+  if (log.coucher) document.getElementById('sl-coucher').value = log.coucher;
+  if (log.reveil)  document.getElementById('sl-reveil').value  = log.reveil;
+  document.getElementById('sl-result').textContent = formatSommeil(log.sommeil);
+
+  // Tracker (readonly on J+1)
+  const ro = future;
+  ['mood','productivite','work'].forEach(f => {
+    const el=document.getElementById('tr-'+(f==='productivite'?'prod':f));
+    if (el) { el.value=log[f]!=null?log[f]:''; el.disabled=ro; }
+  });
+  document.getElementById('tr-mots').value=log.nb_mots||''; document.getElementById('tr-mots').disabled=ro;
+  document.getElementById('tr-weed').value=log.weed||''; document.getElementById('tr-weed').disabled=ro;
+
+  // Rendement
+  const rend=log.rendement!=null?log.rendement:calcRendement(log.champ_gagnes||0);
+  document.getElementById('tr-rendement').textContent=log.champ_gagnes>0||log.rendement!=null?(rend.toFixed(1)+' / 10'):'—';
+
+  // Sommeil
+  document.getElementById('sl-coucher').value=log.coucher||''; document.getElementById('sl-coucher').disabled=ro;
+  document.getElementById('sl-reveil').value=log.reveil||''; document.getElementById('sl-reveil').disabled=ro;
+  document.getElementById('sl-result').textContent=formatSommeil(log.sommeil);
+
+  // Remède
+  ['eau','manger','lit'].forEach(id=>{
+    const el=document.getElementById('rem-'+id);
+    el.className='remede-item'+(log.remede.includes(id)?' checked':'');
+    el.style.pointerEvents=ro?'none':'';el.style.opacity=ro?'0.5':'';
+  });
+
+  // Abstinence
+  const abst=log.abstinence;
+  document.getElementById('abst-card').className='abstinence'+(abst?' checked':'');
+  document.getElementById('abst-card').style.pointerEvents=ro?'none':'';
+  document.getElementById('abst-card').style.opacity=ro?'0.5':'';
+  document.getElementById('abst-chk').textContent=abst?'✓':'';
+  const rew=abstReward();
+  document.getElementById('abst-champ-lbl').innerHTML='+'+rew.champ+' '+IC_CHAMP;
+  document.getElementById('abst-glands-lbl').innerHTML='+'+rew.glands+' '+IC_GLAND;
+  document.getElementById('streak-today').textContent=calcStreak();
+
+  // Selfcare list
+  const scEl=document.getElementById('list-selfcare'); scEl.innerHTML='';
+  [...SELFCARE_DEFS,...S.customSelfcare].filter(h=>isHabitActive(h.id)).forEach(h=>{
+    const done=habitIsChecked(log,h.id);
+    const div=document.createElement('div');
+    div.className='habit'+(done?' checked':'')+(ro?' ro':'');
+    const isCustom=S.customSelfcare.some(x=>x.id===h.id);
+    const pts=getHabitPts(h), name=getHabitName(h);
+    div.innerHTML=`<div class="habit-left"><div class="checkbox"></div><div class="habit-name">${name}</div></div><div class="habit-reward"><span class="pts">+${pts} ${IC_CHAMP}</span>${isCustom?`<span onclick="event.stopPropagation();deleteCustomHabit('${h.id}','selfcare')" style="color:var(--blanc-faded);cursor:pointer;margin-left:4px">×</span>`:''}</div>`;
+    if (!ro) div.onclick=()=>toggleHabit(h.id,'selfcare');
+    else div.style.opacity='0.6';
+    scEl.appendChild(div);
+  });
+
+  // Resp list
+  const rpEl=document.getElementById('list-resp'); rpEl.innerHTML='';
+  const eTier=writingTier(log.nb_mots||0);
+  if (log.nb_mots>0) {
+    const ed=document.createElement('div');
+    ed.className='habit'+(eTier>0?' checked':''); ed.style.cursor='default';
+    ed.innerHTML=`<div class="habit-left"><div class="checkbox"></div><div class="habit-name">Écriture (${log.nb_mots} mots)</div></div><div class="habit-reward"><span class="pts">${eTier>0?'+'+eTier+' '+IC_CHAMP:'0 '+IC_CHAMP}</span><span class="xp">${eTier>0?'+'+eTier+' '+IC_GLAND:'0 '+IC_GLAND}</span></div>`;
+    rpEl.appendChild(ed);
+  }
+  [...RESP_DEFS,...S.customResp].filter(h=>isHabitActive(h.id)).forEach(h=>{
+    const done=habitIsChecked(log,h.id);
+    const div=document.createElement('div');
+    div.className='habit'+(done?' checked':'');
+    const isCustom=S.customResp.some(x=>x.id===h.id);
+    const pts=getHabitPts(h), name=getHabitName(h);
+    div.innerHTML=`<div class="habit-left"><div class="checkbox"></div><div class="habit-name">${name}</div></div><div class="habit-reward"><span class="pts">+${pts} ${IC_CHAMP}</span><span class="xp">+${pts} ${IC_GLAND}</span>${isCustom?`<span onclick="event.stopPropagation();deleteCustomHabit('${h.id}','resp')" style="color:var(--blanc-faded);cursor:pointer;margin-left:4px">×</span>`:''}</div>`;
+    if (!ro) div.onclick=()=>toggleHabit(h.id,'resp');
+    else div.style.opacity='0.6';
+    rpEl.appendChild(div);
+  });
+
+  // Tâches
+  const tachesEl=document.getElementById('list-taches'); tachesEl.innerHTML='';
+  log.taches.forEach((t,i)=>{
+    const div=document.createElement('div');
+    div.className='habit'+(t.cochee?' checked':'');
+    div.innerHTML=`<div class="habit-left"><div class="checkbox"></div><div class="habit-name">${t.name}</div></div><div class="habit-reward"><span class="pts">+${t.valeur} ${IC_CHAMP}</span>${t.type==='resp'?`<span class="xp">+${t.valeur} ${IC_GLAND}</span>`:''}<span onclick="event.stopPropagation();deleteTache(${i})" style="color:var(--blanc-faded);cursor:pointer;margin-left:6px">×</span></div>`;
+    div.onclick=()=>toggleTache(i);
+    tachesEl.appendChild(div);
+  });
+
+  // Notes
+  const notesEl=document.getElementById('notes-area');
+  notesEl.value=log.notes||''; notesEl.disabled=ro;
+}
+
+function renderProgression() {
+  const lv = getLevel();
+  const next = getNextLevel(lv);
+  const streak = calcStreak();
+  const record = calcRecord();
+
+  document.getElementById('pr-streak').textContent = streak;
+  document.getElementById('pr-record').textContent = record;
+  document.getElementById('pr-glands').textContent = Math.round(S.glands);
+  document.getElementById('pr-champ').textContent = Math.round(S.champTotal);
+  document.getElementById('pr-lv-num').textContent = 'Niveau ' + lv.n;
+  document.getElementById('pr-lv-title').textContent = lv.title;
+
+  if (next) {
+    const pct = Math.min(100, ((S.glands - lv.xp) / (next.xp - lv.xp)) * 100);
+    document.getElementById('pr-lv-fill').style.width = pct + '%';
+    document.getElementById('pr-lv-text').innerHTML = `<strong>${S.glands}</strong> / ${next.xp} ${IC_GLAND}`;
+  } else {
+    document.getElementById('pr-lv-fill').style.width = '100%';
+    document.getElementById('pr-lv-text').textContent = 'Niveau maximum';
+  }
+
+  // Engagement
+  const allDates=Object.keys(S.journal).sort();
+  const premier=allDates[0];
+  const act=getActiveDate();
+  const joursEcoules=premier?Math.max(1,Math.round((new Date(act+'T12:00:00')-new Date(premier+'T12:00:00'))/86400000)+1):1;
+  const joursFills=allDates.filter(d=>isFilledDay(S.journal[d])).length;
+  const taux=premier?Math.round(joursFills/joursEcoules*100):0;
+  const eng=document.getElementById('engagement-stats');
+  if (eng) {
+    const fmt=(d)=>new Date(d+'T12:00:00').toLocaleDateString('fr-CA',{day:'numeric',month:'long',year:'numeric'});
+    eng.innerHTML=`
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:14px 16px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--blanc-casse)">${premier?fmt(premier):'—'}</div><div style="font-size:11px;color:var(--blanc-faded);font-family:'Cormorant Upright',serif;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px">Premier jour</div></div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:14px 16px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:32px;color:var(--blanc-casse)">${joursEcoules}</div><div style="font-size:11px;color:var(--blanc-faded);font-family:'Cormorant Upright',serif;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px">Jours écoulés</div></div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:14px 16px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:32px;color:var(--blanc-casse)">${joursFills}</div><div style="font-size:11px;color:var(--blanc-faded);font-family:'Cormorant Upright',serif;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px">Jours remplis</div></div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:14px 16px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:32px;color:var(--moutarde)">${taux}%</div><div style="font-size:11px;color:var(--blanc-faded);font-family:'Cormorant Upright',serif;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px">Taux de remplissage</div></div>`;
+  }
+
+  const ul = document.getElementById('used-list');
+  ul.innerHTML = '';
+  const shown = S.recompensesAchetees.filter(r=>r.id!=='weed');
+  const weedRec = S.recompensesAchetees.find(r=>r.id==='weed');
+  if (!shown.length && !weedRec) {
+    ul.innerHTML = '<div style="color:var(--blanc-faded);font-size:14px;padding:8px 0">Aucune récompense échangée.</div>';
+  } else {
+    shown.forEach(r => {
+      const rewardDef = S.rewards.find(x => x.id === r.id);
+      const unitCost = rewardDef ? rewardDef.cost : 0;
+      const totalCost = r.count * unitCost;
+      const div=document.createElement('div'); div.className='used-item';
+      div.innerHTML=`<span>${r.nom_au_moment||r.name}</span><span class="used-count">${r.count}× (${totalCost} ${IC_CHAMP})</span>`;
+      ul.appendChild(div);
+    });
+    if (weedRec) {
+      const byMonth = {};
+      Object.entries(S.journal).forEach(([date, entry]) => {
+        if (entry.weed) {
+          const m = date.slice(0, 7);
+          byMonth[m] = (byMonth[m] || 0) + entry.weed;
+        }
+      });
+      const months = Object.keys(byMonth).sort().reverse();
+      const total = months.reduce((s, m) => s + byMonth[m], 0);
+      const rows = months.map(m => {
+        const label = new Date(m + '-15').toLocaleDateString('fr-FR', {month:'long'});
+        const moisLabel = label.charAt(0).toUpperCase() + label.slice(1);
+        return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--blanc-faded)">
+          <span>${moisLabel}</span><span class="used-count">${byMonth[m].toFixed(1)} g</span>
+        </div>`;
+      }).join('');
+      const div=document.createElement('div'); div.className='used-item';
+      div.style.cssText='flex-direction:column;align-items:stretch;gap:2px;';
+      div.innerHTML=`<span style="font-size:15px;margin-bottom:4px">Weed</span>
+        ${rows}
+        <div style="display:flex;justify-content:space-between;padding:4px 0 0;border-top:1px solid var(--border-soft);font-size:13px;margin-top:2px">
+          <span style="color:var(--blanc-faded)">Total</span><span class="used-count">${total.toFixed(1)} g</span>
+        </div>`;
+      ul.appendChild(div);
+    }
+  }
+}
+
+function renderRecompenses() {
+  const lv = getLevel();
+  document.getElementById('rw-glands').textContent = Math.round(S.glands);
+  document.getElementById('rw-champ').textContent = Math.round(S.champDispo);
+
+  const editBtn = document.getElementById('edit-mode-btn');
+  const doneBtn = document.getElementById('edit-done-btn');
+  if (editBtn) editBtn.classList.toggle('active', recompensesEditMode);
+  if (doneBtn) doneBtn.style.display = recompensesEditMode ? 'inline-block' : 'none';
+  const editActions = document.getElementById('rew-edit-actions');
+  if (editActions) editActions.style.display = recompensesEditMode ? 'block' : 'none';
+  const addHeaderBtn = document.getElementById('rew-add-header-btn');
+  if (addHeaderBtn) addHeaderBtn.style.display = recompensesEditMode ? 'inline-block' : 'none';
+
+  const avail = document.getElementById('rw-available');
+  const locked = document.getElementById('rw-locked');
+  avail.innerHTML = ''; locked.innerHTML = '';
+
+  S.rewards.forEach((r, i) => {
+    const card = document.createElement('div');
+    const niv = r.niveau || 1;
+    const unlocked = lv.n >= niv;
+    if (recompensesEditMode) {
+      card.className = 'reward-card';
+      card.style.background = 'rgba(166,124,58,0.04)';
+      const opts = Array.from({length:10},(_,k)=>`<option value="${k+1}"${niv===k+1?' selected':''}>${k+1}</option>`).join('');
+      card.innerHTML = `
+        <div style="margin-bottom:6px">
+          <label style="font-family:'Cormorant Upright',serif;font-size:10px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:3px">Nom</label>
+          <input class="reward-edit-field" style="width:100%" type="text" value="${escHtml(r.name)}"
+            onblur="updateRewardField(${i},'name',this.value)" onchange="updateRewardField(${i},'name',this.value)">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-family:'Cormorant Upright',serif;font-size:10px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:3px">Coût ${IC_CHAMP}</label>
+            <input class="reward-edit-field" style="width:100%" type="number" min="1" value="${r.cost}"
+              onblur="updateRewardField(${i},'cost',this.value)" onchange="updateRewardField(${i},'cost',this.value)">
+          </div>
+          <div>
+            <label style="font-family:'Cormorant Upright',serif;font-size:10px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:3px">Niveau requis</label>
+            <select class="reward-edit-field" style="width:100%" onchange="updateRewardField(${i},'niveau',this.value)">${opts}</select>
+          </div>
+        </div>
+        <button class="reward-del-btn" onclick="deleteRewardInline(${i})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/></svg>
+          Supprimer
+        </button>`;
+    } else {
+      const canBuy = S.champDispo >= r.cost;
+      card.className = 'reward-card' + (unlocked && canBuy ? ' available' : '') + (!unlocked ? ' locked' : '');
+      card.innerHTML = `<div class="reward-name">${r.name}</div><div class="reward-cost">${r.cost} ${IC_CHAMP}</div>${!unlocked ? `<div class="reward-lock">🔒 Niveau ${niv} requis</div>` : `<button class="buy-btn" ${!canBuy?'disabled':''} onclick="buyReward('${r.id}')">Acheter</button>`}`;
+    }
+    (unlocked ? avail : locked).appendChild(card);
+  });
+
+  // Indulgence Weed
+  const act=getActiveDate();
+  const actLog=S.journal[act];
+  const abst=actLog&&actLog.abstinence;
+  const btn=document.getElementById('weed-ind-btn');
+  const msg=document.getElementById('weed-ind-msg');
+  if (btn) {
+    btn.disabled=!!abst;
+    msg.style.display=abst?'block':'none';
+    if (abst) msg.textContent='Indulgence bloquée — abstinence en cours.';
+  }
+  updateWeedIndCost();
+}
+
+function renderNiveaux() {
+  const lv = getLevel();
+  const el = document.getElementById('lv-list');
+  el.innerHTML = '';
+  const weedCosts = ABST_TABLE.map(a => a.champ);
+  LEVELS_DATA.forEach(l => {
+    const isCur = l.n === lv.n;
+    const isBefore = l.n < lv.n;
+    const div = document.createElement('div');
+    div.className = 'lv-row' + (isCur ? ' current' : isBefore ? ' past' : '');
+    const abst = ABST_TABLE[l.n - 1];
+    div.innerHTML = `
+      <div class="lv-left">
+        <span class="lv-num">Niv.${l.n}</span>
+        <span class="lv-title">${l.title}</span>
+      </div>
+      <div class="lv-tags">
+        <span class="lv-tag">Weed : ${weedCosts[l.n-1]} ${IC_CHAMP}/g</span>
+        <span class="lv-tag">Abstinence : +${abst.champ} ${IC_CHAMP} / +${abst.glands} ${IC_GLAND}</span>
+      </div>
+      <div class="lv-xp">${l.xp.toLocaleString('fr')} ${IC_GLAND}</div>`;
+    el.appendChild(div);
+  });
+}
+
+// ============================================================
+// HISTORIQUE + CHARTS
+// ============================================================
+let activeMonths = new Set();
+let chartInstances = {};
+
+function getAvailableMonths() {
+  const months = new Set();
+  Object.keys(S.journal).sort().forEach(d => months.add(d.slice(0,7)));
+  return [...months].sort().reverse();
+}
+
+function renderHistorique() {
+  const months = getAvailableMonths();
+  if (!months.length) return;
+
+  // Default: current month
+  if (!activeMonths.size) {
+    const cur = today().slice(0,7);
+    activeMonths.add(months.includes(cur) ? cur : months[0]);
+  }
+
+  // Month selector
+  const sel = document.getElementById('month-selector');
+  sel.innerHTML = '';
+  months.slice(0,12).forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'month-btn' + (activeMonths.has(m) ? ' active' : '');
+    btn.textContent = shortMonth(m);
+    btn.onclick = () => {
+      if (activeMonths.has(m)) { if (activeMonths.size > 1) activeMonths.delete(m); }
+      else { activeMonths.add(m); }
+      renderHistorique();
+    };
+    sel.appendChild(btn);
+  });
+
+  // Build charts
+  const container = document.getElementById('charts-container');
+  container.innerHTML = '';
+
+  // Destroy old chart instances
+  Object.values(chartInstances).forEach(c => c.destroy());
+  chartInstances = {};
+
+  [...activeMonths].sort().forEach(m => {
+    buildMonthCharts(m, container);
+  });
+  buildAverageCycleChart(container);
+  buildCycleTable(container);
+}
+
+function getDaysInMonth(ym) {
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y,m,0).getDate();
+}
+
+function findMainCycle(ym) {
+  const all = Object.entries(S.journal)
+    .filter(([,lg]) => lg.cycle_jour)
+    .sort(([a],[b]) => a<b?-1:1)
+    .map(([d,lg]) => ({d, cj: lg.cycle_jour}));
+  if (!all.length) return null;
+  const starts = all.filter(e=>e.cj===1).map(e=>e.d);
+  const cycles = [];
+  if (starts.length===0) { cycles.push({entries:all}); }
+  else {
+    const before = all.filter(e=>e.d<starts[0]);
+    if (before.length) cycles.push({entries:before});
+    for (let i=0;i<starts.length;i++) {
+      const s=starts[i], end=starts[i+1]||null;
+      cycles.push({entries: all.filter(e=>e.d>=s&&(!end||e.d<end))});
+    }
+  }
+  cycles.forEach(c => { c.inMonth = c.entries.filter(e=>e.d.startsWith(ym)).length; });
+  cycles.sort((a,b)=>b.inMonth-a.inMonth);
+  if (!cycles[0]||cycles[0].inMonth===0) return null;
+  const dates = new Set(cycles[0].entries.map(e=>e.d));
+  return Object.entries(S.journal)
+    .filter(([d])=>dates.has(d)&&S.journal[d].cycle_jour)
+    .sort(([a],[b])=>S.journal[a].cycle_jour-S.journal[b].cycle_jour)
+    .map(([d,lg])=>({d,lg}));
+}
+
+const dashSeg = {segment:{borderDash:ctx=>(ctx.p0.skip||ctx.p1.skip)?[5,5]:[]}};
+
+function buildMonthCharts(ym, container) {
+  const totalDays = getDaysInMonth(ym);
+  const labels = Array.from({length:totalDays},(_,i)=>i+1);
+  const byDay = {};
+  Object.entries(S.journal).filter(([d])=>d.startsWith(ym)).forEach(([d,lg])=>{
+    byDay[parseInt(d.slice(8))] = lg;
+  });
+
+  if (!Object.keys(byDay).length) return;
+
+  const mBlock = document.createElement('div');
+  mBlock.className = 'chart-block';
+  mBlock.innerHTML = `<div class="chart-title">${shortMonth(ym)} — par date</div><canvas id="chart-m-${ym}"></canvas>`;
+  container.appendChild(mBlock);
+
+  const sleepD = labels.map(d=>byDay[d]&&byDay[d].sommeil!=null?Math.min(10,byDay[d].sommeil):null);
+  const moodD  = labels.map(d=>byDay[d]?byDay[d].mood:null);
+  const prodD  = labels.map(d=>byDay[d]?byDay[d].productivite:null);
+  const rendD  = labels.map(d=>byDay[d]?(byDay[d].rendement!=null?byDay[d].rendement:calcRendement(byDay[d].champ_gagnes||0)):null);
+
+  const cycleStartDays = [];
+  Object.entries(S.journal).filter(([d]) => d.startsWith(ym)).forEach(([d, lg]) => {
+    if (lg.cycle_jour === 1) cycleStartDays.push(parseInt(d.slice(8)));
+  });
+  if (S.cycle_debut && S.cycle_debut.startsWith(ym)) {
+    const day = parseInt(S.cycle_debut.slice(8));
+    if (!cycleStartDays.includes(day)) cycleStartDays.push(day);
+  }
+
+  const cycleStartPlugin = {
+    id: 'cycleStart',
+    afterDraw(chart) {
+      if (!cycleStartDays.length) return;
+      const { ctx, scales: { x }, chartArea } = chart;
+      ctx.save();
+      ctx.strokeStyle = '#c9a227';
+      ctx.lineWidth = 1.5;
+      cycleStartDays.forEach(day => {
+        const idx = labels.indexOf(day);
+        if (idx === -1) return;
+        const px = x.getPixelForTick(idx);
+        const py = chartArea.bottom + 18;
+        ctx.beginPath();
+        ctx.arc(px, py, 9, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  };
+
+  const chartOpts = {responsive:true,spanGaps:true,scales:{y:{min:0,max:10,ticks:{color:'#7a6d5e'},grid:{color:'#2f241c'}},x:{ticks:{color:'#7a6d5e'},grid:{color:'#2f241c'}}},plugins:{legend:{display:false}},color:'#b8a892'};
+
+  setTimeout(()=>{
+    const ctx=document.getElementById('chart-m-'+ym); if(!ctx) return;
+    chartInstances['m-'+ym]=new Chart(ctx,{type:'line',plugins:[cycleStartPlugin],data:{labels,datasets:[
+      {label:'Sommeil',data:sleepD,borderColor:'#a67c3a',backgroundColor:'rgba(166,124,58,0.08)',tension:0.3,spanGaps:true,...dashSeg},
+      {label:'Mood',   data:moodD, borderColor:'#c9a227',backgroundColor:'rgba(201,162,39,0.08)',tension:0.3,spanGaps:true,...dashSeg},
+      {label:'Prod.',  data:prodD, borderColor:'#6b8e4e',backgroundColor:'rgba(107,142,78,0.08)',tension:0.3,spanGaps:true,...dashSeg},
+      {label:'Rendement',data:rendD,borderColor:'#b85c2a',backgroundColor:'rgba(184,92,42,0.08)',tension:0.3,spanGaps:true,...dashSeg},
+    ]},options:chartOpts});
+  },0);
+}
+
+function buildAverageCycleChart(container) {
+  const all = Object.entries(S.journal)
+    .filter(([, lg]) => lg.cycle_jour)
+    .sort(([a], [b]) => a < b ? -1 : 1);
+  if (!all.length) return;
+
+  const maxCJ = Math.max(...all.map(([, lg]) => lg.cycle_jour));
+  const byDay = {};
+  for (let j = 1; j <= maxCJ; j++) byDay[j] = [];
+  all.forEach(([, lg]) => {
+    if (lg.cycle_jour >= 1 && lg.cycle_jour <= maxCJ) byDay[lg.cycle_jour].push(lg);
+  });
+
+  const avg = (arr, fn) => {
+    const v = arr.map(fn).filter(x => x != null);
+    return v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length * 10) / 10 : null;
+  };
+
+  const clabels = Array.from({length: maxCJ}, (_, i) => i + 1);
+  const avgSleep = clabels.map(j => avg(byDay[j], l => l.sommeil != null ? Math.min(10, l.sommeil) : null));
+  const avgMood  = clabels.map(j => avg(byDay[j], l => l.mood));
+  const avgProd  = clabels.map(j => avg(byDay[j], l => l.productivite));
+  const avgRend  = clabels.map(j => avg(byDay[j], l => l.rendement != null ? l.rendement : calcRendement(l.champ_gagnes || 0)));
+
+  const cBlock = document.createElement('div');
+  cBlock.className = 'chart-block';
+  cBlock.innerHTML = `<div class="chart-title">Moyennes par jour de cycle — tous cycles</div><canvas id="chart-avg-cycle"></canvas>`;
+  container.appendChild(cBlock);
+
+  setTimeout(() => {
+    const ctx = document.getElementById('chart-avg-cycle'); if (!ctx) return;
+    chartInstances['avg-cycle'] = new Chart(ctx, {type:'line', data:{labels:clabels, datasets:[
+      {label:'Sommeil',   data:avgSleep, borderColor:'#a67c3a', tension:0.3, spanGaps:true, ...dashSeg},
+      {label:'Mood',      data:avgMood,  borderColor:'#c9a227', tension:0.3, spanGaps:true, ...dashSeg},
+      {label:'Prod.',     data:avgProd,  borderColor:'#6b8e4e', tension:0.3, spanGaps:true, ...dashSeg},
+      {label:'Rendement', data:avgRend,  borderColor:'#b85c2a', tension:0.3, spanGaps:true, ...dashSeg},
+    ]}, options:{responsive:true, spanGaps:true,
+      scales:{y:{min:0, max:10, ticks:{color:'#7a6d5e'}, grid:{color:'#2f241c'}}, x:{ticks:{color:'#7a6d5e'}, grid:{color:'#2f241c'}}},
+      plugins:{legend:{display:false}}}});
+  }, 0);
+}
+
+function buildCycleTable(container) {
+  const all = Object.entries(S.journal)
+    .filter(([,lg])=>lg.cycle_jour)
+    .sort(([a],[b])=>a<b?-1:1);
+  if (!all.length) return;
+
+  const maxCJ = Math.max(...all.map(([,lg])=>lg.cycle_jour));
+  const byDay = {};
+  for (let j=1;j<=maxCJ;j++) byDay[j]=[];
+  all.forEach(([,lg])=>{
+    if (lg.cycle_jour>=1&&lg.cycle_jour<=maxCJ) byDay[lg.cycle_jour].push(lg);
+  });
+
+  const avg = (arr,fn) => { const v=arr.map(fn).filter(x=>x!=null); return v.length?Math.round(v.reduce((s,x)=>s+x,0)/v.length*10)/10:null; };
+  const cellBg = (val,type) => {
+    if (val==null) return '';
+    if (type==='sleep') {
+      if (val<6) return 'rgba(184,92,42,0.15)';
+      if (val<7) return 'rgba(166,124,58,0.15)';
+      if (val<=9) return 'rgba(107,142,78,0.15)';
+      return 'rgba(166,124,58,0.15)';
+    }
+    if (val<=3) return 'rgba(184,92,42,0.15)';
+    if (val<=6) return 'rgba(166,124,58,0.15)';
+    return 'rgba(107,142,78,0.15)';
+  };
+
+  const wrap = document.createElement('div');
+  wrap.className = 'chart-block';
+  let html = `<div class="chart-title">Tableau cyclique — moyennes tous cycles</div>
+<div style="overflow-x:auto"><table class="cycle-table">
+<thead><tr><th>Jour</th><th>Mood</th><th>Productivité</th><th>Rendement</th><th>Sommeil</th></tr></thead><tbody>`;
+
+  for (let j=1;j<=maxCJ;j++) {
+    const days = byDay[j];
+    if (!days.length) {
+      html += `<tr class="empty"><td>${j}</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
+    } else {
+      const mood = avg(days,l=>l.mood);
+      const prod = avg(days,l=>l.productivite);
+      const rend = avg(days,l=>l.rendement!=null?l.rendement:null);
+      const slp  = avg(days,l=>l.sommeil);
+      const f = (v,t) => v!=null?`<td style="background:${cellBg(v,t)}">${v}</td>`:'<td>—</td>';
+      html += `<tr><td>${j}</td>${f(mood,'score')}${f(prod,'score')}${f(rend,'score')}${f(slp,'sleep')}</tr>`;
+    }
+  }
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
+  container.appendChild(wrap);
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function nav(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  const tabs = ['today','progression','recompenses','niveaux','historique'];
+  document.querySelectorAll('.tab')[tabs.indexOf(id)]?.classList.add('active');
+  renderAll();
+}
+
+function closeOverlay(id) { document.getElementById(id).classList.remove('show'); }
+
+let confirmCb = null;
+function confirm_(title, body, cb) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').innerHTML = body;
+  confirmCb = cb;
+  document.getElementById('confirm-ok').onclick = () => { closeOverlay('ov-confirm'); if(confirmCb) confirmCb(); };
+  document.getElementById('ov-confirm').classList.add('show');
+}
+
+function toast(msg, ms=2600) {
+  const el = document.getElementById('toast');
+  el.innerHTML = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ============================================================
+// EXPORT / IMPORT / RESET
+// ============================================================
+function exportData() {
+  const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tracker-' + today() + '.json';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      S = JSON.parse(e.target.result);
+      save(); renderAll();
+      toast('Données importées !');
+    } catch(err) { alert('Fichier JSON invalide.'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function confirmReset() {
+  confirm_('Réinitialiser l\'app ?', 'Toutes les données seront effacées. Cette action est irréversible.', () => {
+    localStorage.removeItem('tracker-v2');
+    location.reload();
+  });
+}
+
+// ============================================================
+// BOOTSTRAP
+// ============================================================
+load();
+if (!Object.keys(S.journal).length) {
+  preloadHistorical();
+  save();
+}
+flushDecales();
+dateAffichee = getActiveDate();
+initToday();
+save();
+renderAll();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
