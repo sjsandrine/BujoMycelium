@@ -314,6 +314,12 @@ body::before{
 }
 .modal-field input:focus,.modal-field select:focus{outline:none;border-color:var(--ocre);}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+.diff-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.diff-opt{cursor:pointer;}
+.diff-opt input[type=radio]{display:none;}
+.diff-opt span{display:block;text-align:center;padding:7px 4px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--blanc-faded);line-height:1.3;transition:all 0.15s;}
+.diff-opt span small{font-size:10px;color:var(--orange-brule);}
+.diff-opt input[type=radio]:checked+span{border-color:var(--orange-brule);background:rgba(184,92,42,0.15);color:var(--blanc-casse);}
 .btn-primary{
   background:linear-gradient(90deg,var(--orange-soft),var(--orange-brule));border:none;border-radius:3px;
   color:white;font-family:'Cormorant Upright',serif;font-size:13px;letter-spacing:0.08em;
@@ -425,7 +431,7 @@ body::before{
 
   <div class="section-title">Tracker</div>
   <div class="tracker-grid">
-    <div class="tracker-item"><label>Mood / 10</label><input type="number" id="tr-mood" min="0" max="10" step="1" placeholder="—" onchange="saveTracker('mood',this.value)"></div>
+    <div class="tracker-item"><label>Humeur / 10</label><input type="number" id="tr-mood" min="0" max="10" step="1" placeholder="—" onchange="saveTracker('mood',this.value)"></div>
     <div class="tracker-item"><label>Productivité / 10</label><input type="number" id="tr-prod" min="0" max="10" step="1" placeholder="—" onchange="saveTracker('productivite',this.value)"></div>
     <div class="tracker-item"><label>Heures travaillées</label><input type="number" id="tr-work" min="0" step="0.5" placeholder="0" onchange="saveTracker('work',this.value)"></div>
     <div class="tracker-item"><label>Mots écrits</label><input type="number" id="tr-mots" min="0" step="1" placeholder="0" onchange="updateMots(this.value)"></div>
@@ -439,33 +445,27 @@ body::before{
     </div>
   </div>
 
-  <div class="section-title">Remède en cas de besoin</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+    <div class="section-title" style="margin-bottom:0">Trousse de secours</div>
+    <button onclick="openRemedeEdit()" style="background:transparent;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1;color:var(--blanc-faded)">✏️</button>
+  </div>
   <div class="remede">
     <svg class="remede-bg-deco" viewBox="0 0 32 32" fill="none"><path d="M16 18 L16 30" stroke="#6b8e4e" stroke-width="1.5" stroke-linecap="round"/><path d="M16 24 Q13 23 12 25 Q14 26 16 25" fill="#6b8e4e"/><g fill="#f0e6d2"><ellipse cx="16" cy="6" rx="2.2" ry="4.5"/><ellipse cx="16" cy="18" rx="2.2" ry="4.5"/><ellipse cx="22" cy="12" rx="4.5" ry="2.2"/><ellipse cx="10" cy="12" rx="4.5" ry="2.2"/><ellipse cx="20.5" cy="7.5" rx="2.2" ry="4.5" transform="rotate(45 20.5 7.5)"/><ellipse cx="11.5" cy="16.5" rx="2.2" ry="4.5" transform="rotate(45 11.5 16.5)"/><ellipse cx="20.5" cy="16.5" rx="2.2" ry="4.5" transform="rotate(-45 20.5 16.5)"/><ellipse cx="11.5" cy="7.5" rx="2.2" ry="4.5" transform="rotate(-45 11.5 7.5)"/></g><circle cx="16" cy="12" r="3" fill="#c9a227"/></svg>
-    <div class="remede-subtitle">les jours plus durs, ceci suffit</div>
-    <div class="remede-row">
-      <div class="remede-item" id="rem-eau" onclick="toggleRemede('eau')">
-        <svg class="remede-icon" viewBox="0 0 32 32" fill="none"><path d="M16 4 C 12 10, 7 16, 7 21 C 7 26, 11 29, 16 29 C 21 29, 25 26, 25 21 C 25 16, 20 10, 16 4 Z" fill="currentColor" opacity="0.85"/><path d="M12 18 C 11 20, 11 23, 13 25" stroke="#f0e6d2" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.4"/></svg>
-        <span class="remede-name">Boire de l'eau</span><span class="remede-pts">+5 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></span>
-      </div>
-      <div class="remede-item" id="rem-manger" onclick="toggleRemede('manger')">
-        <svg class="remede-icon" viewBox="0 0 32 32" fill="none"><path d="M16 4 L16 11" stroke="#6b8e4e" stroke-width="1.5" stroke-linecap="round"/><path d="M16 7 Q11 6 9 9 Q12 11 16 9 Z" fill="#6b8e4e"/><circle cx="12" cy="18" r="5" fill="currentColor"/><circle cx="20" cy="18" r="5" fill="currentColor"/><circle cx="16" cy="24" r="5" fill="currentColor"/><circle cx="10.5" cy="16.5" r="1.2" fill="#f0e6d2" opacity="0.5"/><circle cx="18.5" cy="16.5" r="1.2" fill="#f0e6d2" opacity="0.5"/><circle cx="14.5" cy="22.5" r="1.2" fill="#f0e6d2" opacity="0.5"/></svg>
-        <span class="remede-name">Manger une fois</span><span class="remede-pts">+5 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></span>
-      </div>
-      <div class="remede-item" id="rem-lit" onclick="toggleRemede('lit')">
-        <svg class="remede-icon" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="6" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="16" y1="3" x2="16" y2="7"/><line x1="16" y1="25" x2="16" y2="29"/><line x1="3" y1="16" x2="7" y2="16"/><line x1="25" y1="16" x2="29" y2="16"/><line x1="6.5" y1="6.5" x2="9.5" y2="9.5"/><line x1="22.5" y1="22.5" x2="25.5" y2="25.5"/><line x1="6.5" y1="25.5" x2="9.5" y2="22.5"/><line x1="22.5" y1="9.5" x2="25.5" y2="6.5"/></g></svg>
-        <span class="remede-name">Sortir du lit</span><span class="remede-pts">+5 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:-1px;display:inline-block"><path d="M3 11 Q3 4 12 4 Q21 4 21 11 Q21 12 19 12 L5 12 Q3 12 3 11 Z" fill="#b85c2a"/><path d="M9 12 L9 20 Q9 22 12 22 Q15 22 15 20 L15 12 Z" fill="#e8d5b7"/></svg></span>
-      </div>
-    </div>
+    <div class="remede-subtitle">Seuls focus lors des jours difficiles</div>
+    <div class="remede-row" id="remede-row"></div>
   </div>
 
-  <div class="section-title">Quête centrale</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+    <div class="section-title" style="margin-bottom:0">Quête centrale</div>
+    <button onclick="openQueteEdit()" style="background:transparent;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1;color:var(--blanc-faded)">✏️</button>
+  </div>
+  <div style="font-size:12px;color:var(--blanc-faded);font-style:italic;margin-bottom:8px">Habitude à décourager, voir Indulgence dans les récompenses</div>
   <div class="abstinence" id="abst-card" onclick="toggleAbst()">
     <div class="abstinence-left">
       <div class="abst-checkbox" id="abst-chk"></div>
       <div>
-        <div class="abstinence-name">Abstinence</div>
-        <div class="abstinence-sub">champignons décalés au lendemain pour le weed</div>
+        <div class="abstinence-name" id="quete-name-lbl">Abstinence</div>
+        <div class="abstinence-sub">champignons décalés au lendemain pour l'indulgence</div>
       </div>
     </div>
     <div class="abstinence-reward">
@@ -610,7 +610,7 @@ body::before{
   <div class="hist-controls" id="month-selector"></div>
   <div class="chart-legend">
     <div class="legend-item"><div class="legend-dot" style="background:#a67c3a"></div>Sommeil</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#c9a227"></div>Mood</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c9a227"></div>Humeur</div>
     <div class="legend-item"><div class="legend-dot" style="background:#6b8e4e"></div>Productivité</div>
     <div class="legend-item"><div class="legend-dot" style="background:#b85c2a"></div>Rendement</div>
   </div>
@@ -636,7 +636,15 @@ body::before{
     <div class="modal-title" id="habit-modal-title">Ajouter une habitude</div>
     <div class="modal-field"><label>Nom</label><input type="text" id="new-habit-name" placeholder="Ex : Marche 30 min"></div>
     <div class="modal-field"><label>Type</label><select id="new-habit-type"><option value="selfcare">Selfcare (champignons seulement)</option><option value="resp">Responsabilité (champignons + glands)</option></select></div>
-    <div class="modal-field"><label>Valeur en points</label><input type="number" id="new-habit-val" value="10" min="1"></div>
+    <div class="modal-field"><label>Difficulté</label>
+      <div class="diff-selector">
+        <label class="diff-opt"><input type="radio" name="habit-diff" value="5" onchange="onDiffChange('habit')"><span>Facile<br><small>5 pts</small></span></label>
+        <label class="diff-opt"><input type="radio" name="habit-diff" value="10" checked onchange="onDiffChange('habit')"><span>Moyen<br><small>10 pts</small></span></label>
+        <label class="diff-opt"><input type="radio" name="habit-diff" value="20" onchange="onDiffChange('habit')"><span>Difficile<br><small>20 pts</small></span></label>
+        <label class="diff-opt"><input type="radio" name="habit-diff" value="custom" onchange="onDiffChange('habit')"><span>Perso<br><small>libre</small></span></label>
+      </div>
+      <input type="number" id="new-habit-val" value="10" min="1" style="display:none;margin-top:8px;width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--blanc-casse)">
+    </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeOverlay('ov-habit')">Annuler</button>
       <button class="btn-primary" onclick="saveNewHabit()">Ajouter</button>
@@ -649,7 +657,15 @@ body::before{
     <div class="modal-title">Ajouter une tâche</div>
     <div class="modal-field"><label>Nom</label><input type="text" id="new-tache-name" placeholder="Ex : Appeler dentiste"></div>
     <div class="modal-field"><label>Type</label><select id="new-tache-type"><option value="selfcare">Selfcare (champignons seulement)</option><option value="resp">Responsabilité (champignons + glands)</option></select></div>
-    <div class="modal-field"><label>Valeur en points</label><input type="number" id="new-tache-val" value="10" min="1"></div>
+    <div class="modal-field"><label>Difficulté</label>
+      <div class="diff-selector">
+        <label class="diff-opt"><input type="radio" name="tache-diff" value="5" onchange="onDiffChange('tache')"><span>Facile<br><small>5 pts</small></span></label>
+        <label class="diff-opt"><input type="radio" name="tache-diff" value="10" checked onchange="onDiffChange('tache')"><span>Moyen<br><small>10 pts</small></span></label>
+        <label class="diff-opt"><input type="radio" name="tache-diff" value="20" onchange="onDiffChange('tache')"><span>Difficile<br><small>20 pts</small></span></label>
+        <label class="diff-opt"><input type="radio" name="tache-diff" value="custom" onchange="onDiffChange('tache')"><span>Perso<br><small>libre</small></span></label>
+      </div>
+      <input type="number" id="new-tache-val" value="10" min="1" style="display:none;margin-top:8px;width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--blanc-casse)">
+    </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeOverlay('ov-tache')">Annuler</button>
       <button class="btn-primary" onclick="saveNewTache()">Ajouter</button>
@@ -681,6 +697,35 @@ body::before{
     <div class="modal-title" id="edit-habits-title">Modifier la liste</div>
     <div id="edit-habits-list" style="max-height:380px;overflow-y:auto;margin-bottom:14px"></div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeOverlay('ov-edit-habits')">Fermer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-remede-edit">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Trousse de secours</div>
+    <div style="font-size:12px;color:var(--blanc-faded);margin-bottom:12px">Maximum 5 entrées</div>
+    <div id="remede-edit-list" style="margin-bottom:14px"></div>
+    <div id="remede-add-zone" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px"><label style="font-size:11px;color:var(--blanc-faded);display:block;margin-bottom:4px">Nouvelle entrée</label><input id="remede-new-name" type="text" placeholder="Nom…" style="width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--blanc-casse);font-size:13px"></div>
+      <div><label style="font-size:11px;color:var(--blanc-faded);display:block;margin-bottom:4px">Pts</label><input id="remede-new-pts" type="number" value="5" min="1" style="width:55px;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--blanc-casse);font-size:13px"></div>
+      <button onclick="addRemedeEntry()" style="background:var(--orange-brule);border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer">+ Ajouter</button>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn-ghost" onclick="closeOverlay('ov-remede-edit')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-quete-edit">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Quête centrale</div>
+    <div class="modal-field"><label>Nom de la quête</label><input type="text" id="quete-edit-name" placeholder="Abstinence"></div>
+    <div class="modal-field"><label>Pts (laisser vide = selon niveau)</label><input type="number" id="quete-edit-pts" placeholder="auto" min="1"></div>
+    <div class="modal-field"><label>XP / Glands (laisser vide = selon niveau)</label><input type="number" id="quete-edit-xp" placeholder="auto" min="1"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay('ov-quete-edit')">Annuler</button>
+      <button class="btn-primary" onclick="saveQueteConfig()">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -736,36 +781,19 @@ const ABST_TABLE = [
 ];
 
 const SELFCARE_DEFS = [
-  {id:'swim',     name:'Nager',               pts:10},
-  {id:'exercise', name:'Exercice physique',    pts:20},
-  {id:'shower',   name:'Shower',               pts:10},
-  {id:'eshower',  name:'Everything shower',    pts:20},
-  {id:'breakfast',name:'Manger déjeuner',      pts:20, isMeal:true},
-  {id:'lunch',    name:'Manger dîner',         pts:10, isMeal:true},
-  {id:'dinner',   name:'Manger souper',        pts:5,  isMeal:true},
-  {id:'pedicure', name:'Pédicure maison',      pts:10},
-  {id:'manicure', name:'Manucure maison',      pts:5},
-  {id:'slp_mid',  name:'Coucher avant minuit', pts:5,  excl:'slp_22'},
-  {id:'slp_22',   name:'Coucher à 22h',        pts:20, excl:'slp_mid'},
-  {id:'wk_noon',  name:'Lever avant midi',     pts:5,  excl:'wk_10'},
-  {id:'wk_10',    name:'Lever avant 10h',      pts:20, excl:'wk_noon'},
-  {id:'journal',  name:'Journaling',           pts:10},
-  {id:'meditate', name:'Méditation',           pts:20},
+  {id:'eau2l',    name:"Boire 2L d'eau",         pts:10},
+  {id:'repas',    name:'Manger un repas complet', pts:10},
+  {id:'douche',   name:'Douche ou bain',          pts:10},
+  {id:'medic',    name:'Médication',              pts:10},
+  {id:'social',   name:'Social',                  pts:10},
 ];
 
 const RESP_DEFS = [
-  {id:'sink',     name:'Laver évier salle de bain',    pts:5},
-  {id:'toilet',   name:'Laver la toilette',            pts:10},
-  {id:'shower_cl',name:'Laver la douche',              pts:20},
-  {id:'laveuse',  name:'Laveuse',                      pts:5},
-  {id:'secheuse', name:'Sécheuse',                     pts:5},
-  {id:'rangerlav',name:'Ranger lavage',                pts:10},
-  {id:'dishes',   name:'Laver vaisselle',              pts:20},
-  {id:'dishwash', name:'Remplir/vider lave-vaisselle', pts:5},
-  {id:'litter',   name:'Litière distributeur',         pts:10},
-  {id:'paper',    name:'Paperasse',                    pts:20},
-  {id:'jobs',     name:'Recherche emplois',            pts:20},
-  {id:'research', name:'Recherche',                    pts:5},
+  {id:'lit',       name:'Faire le lit',                      pts:10},
+  {id:'courriels', name:'Répondre aux courriels importants', pts:10},
+  {id:'travailler',name:'Travailler',                        pts:10},
+  {id:'paperasse', name:'Paperasse',                         pts:10},
+  {id:'factures',  name:'Payer les factures',                pts:10},
   // Écriture est auto depuis nb_mots
 ];
 
@@ -803,6 +831,9 @@ let S = {
   habitOverrides: {},
   weedPurchases: [],
   cycle_debut: null,
+  habitDeleted: [],
+  remede_defs: null,
+  quete_config: {name: null, pts: null, xp: null},
 };
 
 let dateAffichee = null;
@@ -818,6 +849,13 @@ function load() {
   if (!S.habitOverrides) S.habitOverrides = {};
   if (!S.weedPurchases) S.weedPurchases = [];
   if (!('cycle_debut' in S)) S.cycle_debut = null;
+  if (!S.habitDeleted) S.habitDeleted = [];
+  if (!S.remede_defs) S.remede_defs = [
+    {id:'eau',    name:"Boire de l'eau", pts:5},
+    {id:'manger', name:'Manger une fois', pts:5},
+    {id:'lit',    name:'Sortir du lit',  pts:5},
+  ];
+  if (!S.quete_config) S.quete_config = {name: null, pts: null, xp: null};
   if (S.cycle_debut) {
     let migrated = false;
     Object.entries(S.journal).forEach(([date, lg]) => {
@@ -867,7 +905,7 @@ function habitUncheck(log, id) { log.habitudes = log.habitudes.filter(h=>(typeof
 function habitStoredPts(log, id) { const h=log.habitudes.find(h=>typeof h!=='string'&&h.id===id); return h?h.pts:null; }
 function getHabitPts(h) { const ov=S.habitOverrides[h.id]; return (ov&&ov.pts!==undefined)?ov.pts:h.pts; }
 function getHabitName(h) { const ov=S.habitOverrides[h.id]; return (ov&&ov.name)?ov.name:h.name; }
-function isHabitActive(id) { return !S.habitDisabled[id]; }
+function isHabitActive(id) { return !S.habitDisabled[id] && !S.habitDeleted.includes(id); }
 function isFilledDay(log) {
   if (!log) return false;
   return (log.mood!=null||log.productivite!=null||log.sommeil!=null||
@@ -885,7 +923,11 @@ function getLevel() {
 function getNextLevel(lv) { return LEVELS_DATA.find(l => l.n === lv.n + 1) || null; }
 
 function weedCost() { return ABST_TABLE[getLevel().n - 1].champ; }
-function abstReward() { return ABST_TABLE[getLevel().n - 1]; }
+function abstReward() {
+  const base=ABST_TABLE[getLevel().n - 1];
+  const qc=S.quete_config||{};
+  return {champ: qc.pts||base.champ, glands: qc.xp||base.glands};
+}
 
 function writingTier(mots) {
   if (mots >= 1000) return 30;
@@ -1089,7 +1131,7 @@ function toggleHabit(id, type) {
     if (!def||!isHabitActive(id)) return;
     const pts=getHabitPts(def);
     if (def.excl && !isDone && habitIsChecked(log,def.excl)) {
-      const ex=SELFCARE_DEFS.find(h=>h.id===def.excl);
+      const ex=[...SELFCARE_DEFS,...S.customSelfcare].find(h=>h.id===def.excl);
       if (ex) { const ep=habitStoredPts(log,def.excl)??getHabitPts(ex); habitUncheck(log,def.excl); log.champ_gagnes-=ep; S.champTotal-=ep; S.champDispo-=ep; }
     }
     if (isDone) {
@@ -1119,10 +1161,75 @@ function toggleHabit(id, type) {
 function toggleRemede(id) {
   if (isFuture()) return;
   const log=getLog(dateAffichee);
+  const def=(S.remede_defs||[]).find(r=>r.id===id);
+  const pts=def?def.pts:5;
   const done=log.remede.includes(id);
-  if (done) { log.remede=log.remede.filter(x=>x!==id); log.champ_gagnes-=5; S.champTotal-=5; S.champDispo-=5; }
-  else { log.remede.push(id); log.champ_gagnes+=5; S.champTotal+=5; S.champDispo+=5; toast(`+5 ${IC_CHAMP}`); }
+  if (done) { log.remede=log.remede.filter(x=>x!==id); log.champ_gagnes-=pts; S.champTotal-=pts; S.champDispo-=pts; }
+  else { log.remede.push(id); log.champ_gagnes+=pts; S.champTotal+=pts; S.champDispo+=pts; toast(`+${pts} ${IC_CHAMP}`); }
   storeRendement(dateAffichee);
+  save(); renderToday();
+}
+function renderRemedeRow() {
+  const row=document.getElementById('remede-row'); if(!row) return;
+  const log=getLog(dateAffichee);
+  const ro=isFuture();
+  row.innerHTML='';
+  (S.remede_defs||[]).forEach(r=>{
+    const done=log.remede.includes(r.id);
+    const div=document.createElement('div');
+    div.className='remede-item'+(done?' checked':'');
+    div.innerHTML=`<svg class="remede-icon" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="10" fill="currentColor" opacity="0.7"/></svg><span class="remede-name">${r.name}</span><span class="remede-pts">+${r.pts} ${IC_CHAMP}</span>`;
+    if (!ro) div.onclick=()=>toggleRemede(r.id);
+    else div.style.opacity='0.6';
+    row.appendChild(div);
+  });
+}
+function openRemedeEdit() {
+  renderRemedeEditList();
+  document.getElementById('ov-remede-edit').classList.add('show');
+}
+function renderRemedeEditList() {
+  const list=document.getElementById('remede-edit-list'); list.innerHTML='';
+  (S.remede_defs||[]).forEach((r,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-soft)';
+    row.innerHTML=`<span style="flex:1;font-size:14px">${r.name}</span><span style="font-size:12px;color:var(--orange-brule);white-space:nowrap">${r.pts} ${IC_CHAMP}</span><button onclick="deleteRemedeEntry(${i})" style="background:transparent;border:1px solid var(--border);color:#c0392b;border-radius:20px;padding:2px 8px;font-size:11px;cursor:pointer">✕</button>`;
+    list.appendChild(row);
+  });
+  const addZone=document.getElementById('remede-add-zone');
+  if (addZone) addZone.style.display=(S.remede_defs||[]).length>=5?'none':'flex';
+}
+function addRemedeEntry() {
+  if ((S.remede_defs||[]).length>=5) return;
+  const name=document.getElementById('remede-new-name').value.trim();
+  const pts=parseInt(document.getElementById('remede-new-pts').value)||5;
+  if (!name) return;
+  const id='rem_'+Date.now();
+  if (!S.remede_defs) S.remede_defs=[];
+  S.remede_defs.push({id,name,pts});
+  document.getElementById('remede-new-name').value='';
+  save(); renderRemedeEditList(); renderRemedeRow();
+}
+function deleteRemedeEntry(i) {
+  const id=S.remede_defs[i].id;
+  S.remede_defs.splice(i,1);
+  // Décoche du log si cochée
+  Object.values(S.journal).forEach(lg=>{ lg.remede=lg.remede.filter(x=>x!==id); });
+  save(); renderRemedeEditList(); renderRemedeRow();
+}
+function openQueteEdit() {
+  const qc=S.quete_config||{};
+  document.getElementById('quete-edit-name').value=qc.name||'';
+  document.getElementById('quete-edit-pts').value=qc.pts||'';
+  document.getElementById('quete-edit-xp').value=qc.xp||'';
+  document.getElementById('ov-quete-edit').classList.add('show');
+}
+function saveQueteConfig() {
+  const name=document.getElementById('quete-edit-name').value.trim()||null;
+  const pts=parseInt(document.getElementById('quete-edit-pts').value)||null;
+  const xp=parseInt(document.getElementById('quete-edit-xp').value)||null;
+  S.quete_config={name,pts,xp};
+  closeOverlay('ov-quete-edit');
   save(); renderToday();
 }
 function toggleAbst() {
@@ -1171,19 +1278,39 @@ function saveNotes(val) {
 // ============================================================
 let habitModalType = 'selfcare';
 
+function onDiffChange(ctx) {
+  const radios=document.querySelectorAll(`input[name="${ctx}-diff"]`);
+  let val='10';
+  radios.forEach(r=>{ if(r.checked) val=r.value; });
+  const inp=document.getElementById(`new-${ctx}-val`);
+  inp.style.display=val==='custom'?'block':'none';
+  if(val!=='custom') inp.value=val;
+}
+function getDiffVal(ctx) {
+  const radios=document.querySelectorAll(`input[name="${ctx}-diff"]`);
+  let val='10';
+  radios.forEach(r=>{ if(r.checked) val=r.value; });
+  if(val==='custom') return parseInt(document.getElementById(`new-${ctx}-val`).value)||10;
+  return parseInt(val);
+}
+function resetDiff(ctx) {
+  document.querySelectorAll(`input[name="${ctx}-diff"]`).forEach(r=>{ r.checked=(r.value==='10'); });
+  document.getElementById(`new-${ctx}-val`).style.display='none';
+  document.getElementById(`new-${ctx}-val`).value='10';
+}
 function openAddHabit(type) {
   habitModalType = type;
   document.getElementById('habit-modal-title').textContent = type === 'selfcare' ? 'Ajouter une habitude Selfcare' : 'Ajouter une habitude Responsabilité';
   document.getElementById('new-habit-type').value = type;
   document.getElementById('new-habit-name').value = '';
-  document.getElementById('new-habit-val').value = '10';
+  resetDiff('habit');
   document.getElementById('ov-habit').classList.add('show');
 }
 
 function saveNewHabit() {
   const name = document.getElementById('new-habit-name').value.trim();
   const type = document.getElementById('new-habit-type').value;
-  const pts = parseInt(document.getElementById('new-habit-val').value) || 10;
+  const pts = getDiffVal('habit');
   if (!name) return;
   const id = 'custom_' + Date.now();
   if (type === 'selfcare') S.customSelfcare.push({id, name, pts});
@@ -1206,14 +1333,14 @@ function deleteCustomHabit(id, type) {
 // ============================================================
 function openAddTache() {
   document.getElementById('new-tache-name').value = '';
-  document.getElementById('new-tache-val').value = '10';
+  resetDiff('tache');
   document.getElementById('ov-tache').classList.add('show');
 }
 
 function saveNewTache() {
   const name=document.getElementById('new-tache-name').value.trim();
   const type=document.getElementById('new-tache-type').value;
-  const valeur=parseInt(document.getElementById('new-tache-val').value)||10;
+  const valeur=getDiffVal('tache');
   if (!name) return;
   getLog(dateAffichee).taches.push({id:'t'+Date.now(),name,type,valeur,cochee:false});
   closeOverlay('ov-tache');
@@ -1326,7 +1453,7 @@ function openEditHabits(type) {
 function renderEditHabits() {
   const defs=editHabitsType==='selfcare'?SELFCARE_DEFS:RESP_DEFS;
   const customs=editHabitsType==='selfcare'?S.customSelfcare:S.customResp;
-  const all=[...defs,...customs];
+  const all=[...defs,...customs].filter(h=>!S.habitDeleted.includes(h.id));
   const el=document.getElementById('edit-habits-list');
   el.innerHTML='';
   all.forEach(h=>{
@@ -1335,16 +1462,81 @@ function renderEditHabits() {
     const name=ov.name||h.name;
     const pts=ov.pts!==undefined?ov.pts:h.pts;
     const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-soft)';
+    row.style.cssText='display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border-soft)';
     row.innerHTML=`
       <span style="flex:1;font-size:14px;${disabled?'text-decoration:line-through;color:var(--blanc-faded)':''}">${name}</span>
-      <span style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--orange-brule)">${pts} ${IC_CHAMP}</span>
-      <button onclick="toggleHabitActive('${h.id}')" style="background:transparent;border:1px solid ${disabled?'var(--border)':'var(--vert-mousse)'};color:${disabled?'var(--blanc-faded)':'var(--vert-mousse)'};border-radius:20px;padding:2px 10px;font-size:11px;cursor:pointer;white-space:nowrap">
-        ${disabled?'Désactivée':'Active'}
-      </button>
+      <span style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--orange-brule);white-space:nowrap">${pts} ${IC_CHAMP}</span>
+      <button onclick="toggleHabitActive('${h.id}')" style="background:transparent;border:1px solid ${disabled?'var(--border)':'var(--vert-mousse)'};color:${disabled?'var(--blanc-faded)':'var(--vert-mousse)'};border-radius:20px;padding:2px 8px;font-size:11px;cursor:pointer;white-space:nowrap">${disabled?'Off':'On'}</button>
+      <button onclick="openEditHabitInline('${h.id}')" style="background:transparent;border:1px solid var(--border);color:var(--blanc-faded);border-radius:20px;padding:2px 8px;font-size:11px;cursor:pointer">✏️</button>
+      <button onclick="deleteAnyHabit('${h.id}')" style="background:transparent;border:1px solid var(--border);color:#c0392b;border-radius:20px;padding:2px 8px;font-size:11px;cursor:pointer">✕</button>
     `;
     el.appendChild(row);
   });
+  // Champ ajout rapide
+  const addRow=document.createElement('div');
+  addRow.style.cssText='margin-top:12px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap';
+  addRow.innerHTML=`
+    <div style="flex:1;min-width:120px"><label style="font-size:11px;color:var(--blanc-faded);display:block;margin-bottom:4px">Nouvelle entrée</label><input id="eh-new-name" type="text" placeholder="Nom…" style="width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--blanc-casse);font-size:13px"></div>
+    <div><label style="font-size:11px;color:var(--blanc-faded);display:block;margin-bottom:4px">Pts</label><input id="eh-new-pts" type="number" value="10" min="1" style="width:60px;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--blanc-casse);font-size:13px"></div>
+    <button onclick="addHabitFromEdit()" style="background:var(--orange-brule);border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer">+ Ajouter</button>
+  `;
+  el.appendChild(addRow);
+  // Champ édition inline (caché par défaut)
+  const editBox=document.createElement('div');
+  editBox.id='eh-inline-edit';
+  editBox.style.cssText='display:none;margin-top:10px;padding:10px;background:var(--bg-deep);border-radius:8px;border:1px solid var(--border)';
+  editBox.innerHTML=`
+    <div style="font-size:12px;color:var(--blanc-faded);margin-bottom:8px">Modifier l'entrée</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px"><input id="eh-edit-name" type="text" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--blanc-casse);font-size:13px"></div>
+      <div><input id="eh-edit-pts" type="number" min="1" style="width:60px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--blanc-casse);font-size:13px"></div>
+      <button onclick="saveEditHabitInline()" style="background:var(--vert-mousse);border:none;color:#fff;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">✓</button>
+      <button onclick="document.getElementById('eh-inline-edit').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--blanc-faded);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+  `;
+  el.appendChild(editBox);
+}
+let editingHabitId=null;
+function openEditHabitInline(id) {
+  const defs=editHabitsType==='selfcare'?SELFCARE_DEFS:RESP_DEFS;
+  const customs=editHabitsType==='selfcare'?S.customSelfcare:S.customResp;
+  const h=[...defs,...customs].find(x=>x.id===id); if(!h) return;
+  const ov=S.habitOverrides[h.id]||{};
+  editingHabitId=id;
+  document.getElementById('eh-edit-name').value=ov.name||h.name;
+  document.getElementById('eh-edit-pts').value=ov.pts!==undefined?ov.pts:h.pts;
+  document.getElementById('eh-inline-edit').style.display='block';
+}
+function saveEditHabitInline() {
+  if (!editingHabitId) return;
+  const name=document.getElementById('eh-edit-name').value.trim();
+  const pts=parseInt(document.getElementById('eh-edit-pts').value)||10;
+  if (!S.habitOverrides) S.habitOverrides={};
+  S.habitOverrides[editingHabitId]={name, pts};
+  editingHabitId=null;
+  document.getElementById('eh-inline-edit').style.display='none';
+  save(); renderEditHabits(); renderToday();
+}
+function addHabitFromEdit() {
+  const name=document.getElementById('eh-new-name').value.trim();
+  const pts=parseInt(document.getElementById('eh-new-pts').value)||10;
+  if (!name) return;
+  const id='custom_'+Date.now();
+  if (editHabitsType==='selfcare') S.customSelfcare.push({id,name,pts});
+  else S.customResp.push({id,name,pts});
+  save(); renderEditHabits(); renderToday();
+}
+function deleteAnyHabit(id) {
+  // Si c'est une habitude custom, on la retire du tableau
+  const isCustomSC=S.customSelfcare.some(h=>h.id===id);
+  const isCustomR=S.customResp.some(h=>h.id===id);
+  if (isCustomSC) S.customSelfcare=S.customSelfcare.filter(h=>h.id!==id);
+  else if (isCustomR) S.customResp=S.customResp.filter(h=>h.id!==id);
+  else { if (!S.habitDeleted.includes(id)) S.habitDeleted.push(id); }
+  // Décoche si cochée aujourd'hui
+  const log=getLog(today());
+  if (habitIsChecked(log,id)) { log.habitudes=log.habitudes.filter(h=>(typeof h==='string'?h:h.id)!==id); }
+  save(); renderEditHabits(); renderToday();
 }
 function toggleHabitActive(id) {
   if (S.habitDisabled[id]) delete S.habitDisabled[id];
@@ -1573,6 +1765,9 @@ function renderToday() {
   document.getElementById('abst-champ-lbl').innerHTML='+'+rew.champ+' '+IC_CHAMP;
   document.getElementById('abst-glands-lbl').innerHTML='+'+rew.glands+' '+IC_GLAND;
   document.getElementById('streak-today').textContent=calcStreak();
+  const qn=document.getElementById('quete-name-lbl');
+  if(qn) qn.textContent=(S.quete_config&&S.quete_config.name)||'Abstinence';
+  renderRemedeRow();
 
   // Selfcare list
   const scEl=document.getElementById('list-selfcare'); scEl.innerHTML='';
