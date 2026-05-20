@@ -314,6 +314,8 @@ body::before{
 }
 .modal-field input:focus,.modal-field select:focus{outline:none;border-color:var(--ocre);}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+.ind-unit-btn{background:transparent;border:1px solid var(--border);color:var(--blanc-faded);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;transition:all 0.15s;}
+.ind-unit-btn.active{border-color:var(--orange-brule);background:rgba(184,92,42,0.15);color:var(--blanc-casse);}
 .diff-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .diff-opt{cursor:pointer;}
 .diff-opt input[type=radio]{display:none;}
@@ -436,7 +438,7 @@ body::before{
     <div class="tracker-item"><label>Heures travaillées</label><input type="number" id="tr-work" min="0" step="0.5" placeholder="0" onchange="saveTracker('work',this.value)"></div>
     <div class="tracker-item"><label>Mots écrits</label><input type="number" id="tr-mots" min="0" step="1" placeholder="0" onchange="updateMots(this.value)"></div>
     <div class="tracker-item">
-      <label>Weed (g)</label>
+      <label id="tr-weed-label">Habitude à décourager (g)</label>
       <input type="number" id="tr-weed" min="0" step="0.1" placeholder="0" onchange="updateWeed(this.value)">
     </div>
     <div class="tracker-item">
@@ -586,11 +588,14 @@ body::before{
       </div>
     </div>
   </div>
-  <div class="section-title" style="color:var(--orange-brule)">Indulgence</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <div class="section-title" style="color:var(--orange-brule);margin-bottom:0">Indulgence</div>
+    <button onclick="openIndulgenceEdit()" style="background:transparent;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1;color:var(--blanc-faded)">✏️</button>
+  </div>
   <div style="max-width:280px">
     <div class="reward-card" id="weed-indulgence-card" style="border-style:dashed;border-color:rgba(184,92,42,0.4)">
-      <div class="reward-name">Weed</div>
-      <div style="font-size:12px;color:var(--blanc-faded);margin-bottom:6px">Quantité (g)</div>
+      <div class="reward-name" id="ind-card-name">Habitude à décourager</div>
+      <div style="font-size:12px;color:var(--blanc-faded);margin-bottom:6px" id="ind-card-unit-lbl">Quantité (g)</div>
       <input type="number" id="weed-ind-qty" class="time-input" min="0" step="0.5" placeholder="0" oninput="updateWeedIndCost()">
       <div id="weed-ind-cost" style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ocre);margin-top:6px;">—</div>
       <button class="buy-btn" id="weed-ind-btn" onclick="buyWeedIndulgence()">Acheter</button>
@@ -729,6 +734,31 @@ body::before{
   </div>
 </div>
 
+<div class="overlay" id="ov-indulgence-edit">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Indulgence</div>
+    <div class="modal-field"><label>Nom de l'indulgence</label><input type="text" id="ind-edit-name" placeholder="ex : Weed, Alcool, Réseaux sociaux…"></div>
+    <div class="modal-field"><label>Unité de mesure</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px" id="ind-unit-btns">
+        <button class="ind-unit-btn" data-unit="g" onclick="selectIndUnit('g')">g</button>
+        <button class="ind-unit-btn" data-unit="mg" onclick="selectIndUnit('mg')">mg</button>
+        <button class="ind-unit-btn" data-unit="ml" onclick="selectIndUnit('ml')">ml</button>
+        <button class="ind-unit-btn" data-unit="verre" onclick="selectIndUnit('verre')">verre</button>
+        <button class="ind-unit-btn" data-unit="h" onclick="selectIndUnit('h')">h</button>
+        <button class="ind-unit-btn" data-unit="min" onclick="selectIndUnit('min')">min</button>
+        <button class="ind-unit-btn" data-unit="fois" onclick="selectIndUnit('fois')">fois</button>
+        <button class="ind-unit-btn" data-unit="portion" onclick="selectIndUnit('portion')">portion</button>
+        <button class="ind-unit-btn" data-unit="custom" onclick="selectIndUnit('custom')">Personnalisée…</button>
+      </div>
+      <input type="text" id="ind-edit-custom-unit" placeholder="Unité libre…" style="display:none;width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--blanc-casse);font-size:13px">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay('ov-indulgence-edit')">Annuler</button>
+      <button class="btn-primary" onclick="saveIndulgenceConfig()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-settings">
   <div class="modal" style="max-width:460px">
     <div class="modal-title">Paramètres</div>
@@ -762,16 +792,16 @@ body::before{
 // DATA
 // ============================================================
 const LEVELS_DATA = [
-  {n:1,  title:'Paysanne',    xp:0},
-  {n:2,  title:'Artisane',    xp:250},
-  {n:3,  title:'Bourgeoise',  xp:650},
-  {n:4,  title:'Demoiselle',  xp:1250},
-  {n:5,  title:'Dame',        xp:2100},
-  {n:6,  title:'Vicomtesse',  xp:3300},
-  {n:7,  title:'Comtesse',    xp:4900},
-  {n:8,  title:'Duchesse',    xp:7000},
-  {n:9,  title:'Reine',       xp:9800},
-  {n:10, title:'Impératrice', xp:13500},
+  {n:1,  title:'Graine',      xp:0},
+  {n:2,  title:'Germe',       xp:250},
+  {n:3,  title:'Pousse',      xp:650},
+  {n:4,  title:'Bourgeon',    xp:1250},
+  {n:5,  title:'Fleur',       xp:2100},
+  {n:6,  title:'Fruit',       xp:3300},
+  {n:7,  title:'Oasis',       xp:4900},
+  {n:8,  title:'Forêt',       xp:7000},
+  {n:9,  title:'Écosystème',  xp:9800},
+  {n:10, title:'Éden',        xp:13500},
 ];
 
 const ABST_TABLE = [
@@ -834,6 +864,7 @@ let S = {
   habitDeleted: [],
   remede_defs: null,
   quete_config: {name: null, pts: null, xp: null},
+  indulgence_config: {name: 'Habitude à décourager', unit: 'g', customUnit: ''},
 };
 
 let dateAffichee = null;
@@ -856,6 +887,7 @@ function load() {
     {id:'lit',    name:'Sortir du lit',  pts:5},
   ];
   if (!S.quete_config) S.quete_config = {name: null, pts: null, xp: null};
+  if (!S.indulgence_config) S.indulgence_config = {name: 'Habitude à décourager', unit: 'g', customUnit: ''};
   if (S.cycle_debut) {
     let migrated = false;
     Object.entries(S.journal).forEach(([date, lg]) => {
@@ -1416,28 +1448,62 @@ function renderCalendar() {
 // ============================================================
 const WEED_COUTS=[35,45,60,80,105,135,170,210,260,320];
 function weedIndCost() { return WEED_COUTS[getLevel().n-1]; }
+function getIndUnit() {
+  const ic=S.indulgence_config||{};
+  return ic.unit==='custom'?(ic.customUnit||'unité'):ic.unit||'g';
+}
+function getIndName() { return (S.indulgence_config&&S.indulgence_config.name)||'Habitude à décourager'; }
 function updateWeedIndCost() {
   const qty=parseFloat(document.getElementById('weed-ind-qty').value)||0;
   const cost=Math.round(qty*weedIndCost()*10)/10;
-  document.getElementById('weed-ind-cost').innerHTML=qty>0?`${cost} ${IC_CHAMP} (${weedIndCost()} ${IC_CHAMP}/g)`:'—';
+  const unit=getIndUnit();
+  document.getElementById('weed-ind-cost').innerHTML=qty>0?`${cost} ${IC_CHAMP} (${weedIndCost()} ${IC_CHAMP}/${unit})`:'—';
 }
 function buyWeedIndulgence() {
   const act=getActiveDate();
-  const actLog=S.journal[act];
   const qty=parseFloat(document.getElementById('weed-ind-qty').value)||0;
   if (qty<=0) { toast('Entrez une quantité.'); return; }
   const cost=Math.round(qty*weedIndCost()*10)/10;
+  const unit=getIndUnit();
+  const nom=getIndName();
   if (S.champDispo<cost) { toast('Pas assez de champignons !'); return; }
-  confirm_(`Acheter ${qty} g de weed ?`,`Coût : ${cost} ${IC_CHAMP} — Solde après : ${S.champDispo-cost}`,()=>{
+  confirm_(`${nom} — ${qty} ${unit} ?`,`Coût : ${cost} ${IC_CHAMP} — Solde après : ${Math.round(S.champDispo-cost)}`,()=>{
     S.champDispo-=cost;
     S.weedPurchases.push({date:act,qty,cost});
     const existing=S.recompensesAchetees.find(x=>x.id==='weed');
     if (existing) existing.qty=(existing.qty||0)+qty;
-    else S.recompensesAchetees.push({id:'weed',name:'Weed',qty});
+    else S.recompensesAchetees.push({id:'weed',name:nom,qty});
     document.getElementById('weed-ind-qty').value='';
     document.getElementById('weed-ind-cost').textContent='—';
-    save(); renderAll(); toast(`${qty} g acheté ! -${cost} ${IC_CHAMP}`);
+    save(); renderAll(); toast(`${qty} ${unit} enregistré ! -${cost} ${IC_CHAMP}`);
   });
+}
+let _selectedIndUnit='g';
+function openIndulgenceEdit() {
+  const ic=S.indulgence_config||{};
+  document.getElementById('ind-edit-name').value=ic.name||'';
+  _selectedIndUnit=ic.unit||'g';
+  document.getElementById('ind-edit-custom-unit').value=ic.customUnit||'';
+  document.getElementById('ind-edit-custom-unit').style.display=_selectedIndUnit==='custom'?'block':'none';
+  refreshIndUnitBtns();
+  document.getElementById('ov-indulgence-edit').classList.add('show');
+}
+function selectIndUnit(u) {
+  _selectedIndUnit=u;
+  document.getElementById('ind-edit-custom-unit').style.display=u==='custom'?'block':'none';
+  refreshIndUnitBtns();
+}
+function refreshIndUnitBtns() {
+  document.querySelectorAll('.ind-unit-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.unit===_selectedIndUnit);
+  });
+}
+function saveIndulgenceConfig() {
+  const name=document.getElementById('ind-edit-name').value.trim()||'Habitude à décourager';
+  const customUnit=document.getElementById('ind-edit-custom-unit').value.trim()||'unité';
+  S.indulgence_config={name,unit:_selectedIndUnit,customUnit};
+  closeOverlay('ov-indulgence-edit');
+  save(); renderRecompenses(); renderProgression(); renderToday();
 }
 
 // ============================================================
@@ -1738,6 +1804,8 @@ function renderToday() {
   });
   document.getElementById('tr-mots').value=log.nb_mots||''; document.getElementById('tr-mots').disabled=ro;
   document.getElementById('tr-weed').value=log.weed||''; document.getElementById('tr-weed').disabled=ro;
+  const trWeedLbl=document.getElementById('tr-weed-label');
+  if(trWeedLbl) trWeedLbl.textContent=`${getIndName()} (${getIndUnit()})`;
 
   // Rendement
   const rend=log.rendement!=null?log.rendement:calcRendement(log.champ_gagnes||0);
@@ -1892,10 +1960,11 @@ function renderProgression() {
       }).join('');
       const div=document.createElement('div'); div.className='used-item';
       div.style.cssText='flex-direction:column;align-items:stretch;gap:2px;';
-      div.innerHTML=`<span style="font-size:15px;margin-bottom:4px">Weed</span>
-        ${rows}
+      const indNm=getIndName(), indUt=getIndUnit();
+      div.innerHTML=`<span style="font-size:15px;margin-bottom:4px">${indNm}</span>
+        ${rows.replace(/g<\/span>/g,`${indUt}</span>`)}
         <div style="display:flex;justify-content:space-between;padding:4px 0 0;border-top:1px solid var(--border-soft);font-size:13px;margin-top:2px">
-          <span style="color:var(--blanc-faded)">Total</span><span class="used-count">${total.toFixed(1)} g</span>
+          <span style="color:var(--blanc-faded)">Total</span><span class="used-count">${total.toFixed(1)} ${indUt}</span>
         </div>`;
       ul.appendChild(div);
     }
@@ -1957,7 +2026,7 @@ function renderRecompenses() {
     (unlocked ? avail : locked).appendChild(card);
   });
 
-  // Indulgence Weed
+  // Indulgence
   const act=getActiveDate();
   const actLog=S.journal[act];
   const abst=actLog&&actLog.abstinence;
@@ -1968,6 +2037,12 @@ function renderRecompenses() {
     msg.style.display=abst?'block':'none';
     if (abst) msg.textContent='Indulgence bloquée — abstinence en cours.';
   }
+  const indName=document.getElementById('ind-card-name');
+  const indUnitLbl=document.getElementById('ind-card-unit-lbl');
+  if (indName) indName.textContent=getIndName();
+  if (indUnitLbl) indUnitLbl.textContent=`Quantité (${getIndUnit()})`;
+  const trWeedLbl=document.getElementById('tr-weed-label');
+  if (trWeedLbl) trWeedLbl.textContent=`${getIndName()} (${getIndUnit()})`;
   updateWeedIndCost();
 }
 
@@ -1988,8 +2063,8 @@ function renderNiveaux() {
         <span class="lv-title">${l.title}</span>
       </div>
       <div class="lv-tags">
-        <span class="lv-tag">Weed : ${weedCosts[l.n-1]} ${IC_CHAMP}/g</span>
-        <span class="lv-tag">Abstinence : +${abst.champ} ${IC_CHAMP} / +${abst.glands} ${IC_GLAND}</span>
+        <span class="lv-tag">${getIndName()} : ${weedCosts[l.n-1]} ${IC_CHAMP}/${getIndUnit()}</span>
+        <span class="lv-tag">${(S.quete_config&&S.quete_config.name)||'Abstinence'} : +${abst.champ} ${IC_CHAMP} / +${abst.glands} ${IC_GLAND}</span>
       </div>
       <div class="lv-xp">${l.xp.toLocaleString('fr')} ${IC_GLAND}</div>`;
     el.appendChild(div);
