@@ -314,6 +314,7 @@ body::before{
 }
 .modal-field input:focus,.modal-field select:focus{outline:none;border-color:var(--ocre);}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+.heatmap-cell{text-align:center;padding:2px 1px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px;}
 .ind-unit-btn{background:transparent;border:1px solid var(--border);color:var(--blanc-faded);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;transition:all 0.15s;}
 .ind-unit-btn.active{border-color:var(--orange-brule);background:rgba(184,92,42,0.15);color:var(--blanc-casse);}
 .diff-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
@@ -431,16 +432,19 @@ body::before{
     <div class="sleep-result"><div class="counter-label">Heures de sommeil</div><div class="sleep-result-value" id="sl-result">—</div></div>
   </div>
 
-  <div class="section-title">Tracker</div>
-  <div class="tracker-grid">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+    <div class="section-title" style="margin-bottom:0">Tracker</div>
+    <button onclick="openTrackerEdit()" style="background:transparent;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1;color:var(--blanc-faded)">✏️</button>
+  </div>
+  <div class="tracker-grid" id="tracker-grid">
     <div class="tracker-item"><label>Humeur / 10</label><input type="number" id="tr-mood" min="0" max="10" step="1" placeholder="—" onchange="saveTracker('mood',this.value)"></div>
     <div class="tracker-item"><label>Productivité / 10</label><input type="number" id="tr-prod" min="0" max="10" step="1" placeholder="—" onchange="saveTracker('productivite',this.value)"></div>
-    <div class="tracker-item"><label>Heures travaillées</label><input type="number" id="tr-work" min="0" step="0.5" placeholder="0" onchange="saveTracker('work',this.value)"></div>
     <div class="tracker-item"><label>Mots écrits</label><input type="number" id="tr-mots" min="0" step="1" placeholder="0" onchange="updateMots(this.value)"></div>
     <div class="tracker-item">
       <label id="tr-weed-label">Habitude à décourager (g)</label>
       <input type="number" id="tr-weed" min="0" step="0.1" placeholder="0" onchange="updateWeed(this.value)">
     </div>
+    <div id="custom-tracker-inputs"></div>
     <div class="tracker-item">
       <label>Rendement (auto)</label>
       <div id="tr-rendement" style="font-family:'JetBrains Mono',monospace;font-size:20px;color:#a67c3a;padding:7px 0;">—</div>
@@ -705,6 +709,24 @@ body::before{
   </div>
 </div>
 
+<div class="overlay" id="ov-tracker-edit">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">Trackers numériques</div>
+    <div style="font-size:12px;color:var(--blanc-faded);margin-bottom:12px">Maximum 5 trackers libres · Humeur et Productivité sont fixes</div>
+    <div id="tracker-edit-list" style="margin-bottom:14px"></div>
+    <div id="tracker-add-zone">
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:110px"><label style="font-size:11px;color:var(--blanc-faded);display:block;margin-bottom:4px">Nom</label><input id="te-new-name" type="text" placeholder="Ex : Calories…" style="width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--blanc-casse);font-size:13px"></div>
+        <div style="width:70px"><label style="font-size:11px;color:var(--blanc-faded);display:block;margin-bottom:4px">Unité</label><input id="te-new-unit" type="text" placeholder="g, km…" style="width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--blanc-casse);font-size:13px"></div>
+        <button onclick="addCustomTracker()" style="background:var(--orange-brule);border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer">+ Ajouter</button>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn-ghost" onclick="closeOverlay('ov-tracker-edit')">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-remede-edit">
   <div class="modal" style="max-width:420px">
     <div class="modal-title">Trousse de secours</div>
@@ -865,6 +887,7 @@ let S = {
   remede_defs: null,
   quete_config: {name: null, pts: null, xp: null},
   indulgence_config: {name: 'Habitude à décourager', unit: 'g', customUnit: ''},
+  custom_trackers: null,
 };
 
 let dateAffichee = null;
@@ -888,6 +911,16 @@ function load() {
   ];
   if (!S.quete_config) S.quete_config = {name: null, pts: null, xp: null};
   if (!S.indulgence_config) S.indulgence_config = {name: 'Habitude à décourager', unit: 'g', customUnit: ''};
+  if (!S.custom_trackers) S.custom_trackers = [
+    {id:'ct_work',  name:'Heures travaillées',      unit:'h'},
+    {id:'ct_sport', name:"Minutes d'entraînement",  unit:'min'},
+  ];
+  // Migration : copie log.work → custom_vals.ct_work, init custom_vals sur toutes les entrées
+  Object.values(S.journal).forEach(lg => {
+    if (!lg.custom_vals) lg.custom_vals = {};
+    if (lg.work != null && lg.work !== 0 && lg.custom_vals.ct_work == null)
+      lg.custom_vals.ct_work = lg.work;
+  });
   if (S.cycle_debut) {
     let migrated = false;
     Object.entries(S.journal).forEach(([date, lg]) => {
@@ -1215,6 +1248,104 @@ function renderRemedeRow() {
     else div.style.opacity='0.6';
     row.appendChild(div);
   });
+}
+// ============================================================
+// CUSTOM TRACKERS
+// ============================================================
+function openTrackerEdit() {
+  renderTrackerEditList();
+  document.getElementById('ov-tracker-edit').classList.add('show');
+}
+function renderTrackerEditList() {
+  const list = document.getElementById('tracker-edit-list');
+  const addZone = document.getElementById('tracker-add-zone');
+  const trs = S.custom_trackers || [];
+  list.innerHTML = '';
+  trs.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--border-soft)';
+    row.innerHTML = `
+      <span style="flex:1;font-size:14px">${t.name}</span>
+      <span style="font-size:12px;color:var(--blanc-faded)">${t.unit||''}</span>
+      <button onclick="openInlineTrackerEdit(${i})" style="background:transparent;border:1px solid var(--border);color:var(--blanc-faded);border-radius:20px;padding:2px 8px;font-size:11px;cursor:pointer">✏️</button>
+      <button onclick="deleteCustomTracker(${i})" style="background:transparent;border:1px solid var(--border);color:#c0392b;border-radius:20px;padding:2px 8px;font-size:11px;cursor:pointer">✕</button>`;
+    list.appendChild(row);
+  });
+  // Inline edit box
+  const editBox = document.createElement('div');
+  editBox.id = 'te-inline-edit';
+  editBox.style.cssText = 'display:none;margin-top:8px;padding:10px;background:var(--bg-deep);border-radius:8px;border:1px solid var(--border)';
+  editBox.innerHTML = `
+    <div style="font-size:12px;color:var(--blanc-faded);margin-bottom:8px">Modifier le tracker</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px"><input id="te-edit-name" type="text" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--blanc-casse);font-size:13px"></div>
+      <div style="width:65px"><input id="te-edit-unit" type="text" placeholder="unité" style="width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:5px 6px;color:var(--blanc-casse);font-size:13px"></div>
+      <button onclick="saveInlineTrackerEdit()" style="background:var(--vert-mousse);border:none;color:#fff;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer">✓</button>
+      <button onclick="document.getElementById('te-inline-edit').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--blanc-faded);border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer">✕</button>
+    </div>`;
+  list.appendChild(editBox);
+  if (addZone) addZone.style.display = trs.length >= 5 ? 'none' : 'block';
+}
+let _editingTrackerIdx = -1;
+function openInlineTrackerEdit(i) {
+  const t = (S.custom_trackers||[])[i]; if (!t) return;
+  _editingTrackerIdx = i;
+  document.getElementById('te-edit-name').value = t.name;
+  document.getElementById('te-edit-unit').value = t.unit || '';
+  document.getElementById('te-inline-edit').style.display = 'block';
+}
+function saveInlineTrackerEdit() {
+  if (_editingTrackerIdx < 0) return;
+  const name = document.getElementById('te-edit-name').value.trim();
+  const unit = document.getElementById('te-edit-unit').value.trim();
+  if (!name) return;
+  S.custom_trackers[_editingTrackerIdx].name = name;
+  S.custom_trackers[_editingTrackerIdx].unit = unit;
+  _editingTrackerIdx = -1;
+  document.getElementById('te-inline-edit').style.display = 'none';
+  save(); renderTrackerEditList(); renderToday();
+}
+function addCustomTracker() {
+  const trs = S.custom_trackers || [];
+  if (trs.length >= 5) return;
+  const name = document.getElementById('te-new-name').value.trim();
+  const unit = document.getElementById('te-new-unit').value.trim();
+  if (!name) return;
+  trs.push({id: 'ct_' + Date.now(), name, unit});
+  S.custom_trackers = trs;
+  document.getElementById('te-new-name').value = '';
+  document.getElementById('te-new-unit').value = '';
+  save(); renderTrackerEditList(); renderToday();
+}
+function deleteCustomTracker(i) {
+  S.custom_trackers.splice(i, 1);
+  save(); renderTrackerEditList(); renderToday();
+}
+function renderCustomTrackerInputs() {
+  const container = document.getElementById('custom-tracker-inputs');
+  if (!container) return;
+  const log = getLog(dateAffichee);
+  if (!log.custom_vals) log.custom_vals = {};
+  const ro = isFuture();
+  container.innerHTML = '';
+  (S.custom_trackers || []).forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'tracker-item';
+    const lbl = t.unit ? `${t.name} (${t.unit})` : t.name;
+    div.innerHTML = `<label>${lbl}</label><input type="number" id="ctr-${t.id}" min="0" step="0.1" placeholder="0" ${ro ? 'disabled' : ''} onchange="saveCustomTrackerVal('${t.id}',this.value)">`;
+    container.appendChild(div);
+    // Set current value
+    const inp = div.querySelector('input');
+    const val = log.custom_vals[t.id];
+    if (val != null) inp.value = val;
+  });
+}
+function saveCustomTrackerVal(id, val) {
+  if (isFuture()) return;
+  const log = getLog(dateAffichee);
+  if (!log.custom_vals) log.custom_vals = {};
+  log.custom_vals[id] = parseFloat(val) || 0;
+  save();
 }
 function openRemedeEdit() {
   renderRemedeEditList();
@@ -1798,12 +1929,13 @@ function renderToday() {
 
   // Tracker (readonly on J+1)
   const ro = future;
-  ['mood','productivite','work'].forEach(f => {
+  ['mood','productivite'].forEach(f => {
     const el=document.getElementById('tr-'+(f==='productivite'?'prod':f));
     if (el) { el.value=log[f]!=null?log[f]:''; el.disabled=ro; }
   });
   document.getElementById('tr-mots').value=log.nb_mots||''; document.getElementById('tr-mots').disabled=ro;
   document.getElementById('tr-weed').value=log.weed||''; document.getElementById('tr-weed').disabled=ro;
+  renderCustomTrackerInputs();
   const trWeedLbl=document.getElementById('tr-weed-label');
   if(trWeedLbl) trWeedLbl.textContent=`${getIndName()} (${getIndUnit()})`;
 
@@ -2218,6 +2350,69 @@ function buildMonthCharts(ym, container) {
       {label:'Rendement',data:rendD,borderColor:'#b85c2a',backgroundColor:'rgba(184,92,42,0.08)',tension:0.3,spanGaps:true,...dashSeg},
     ]},options:chartOpts});
   },0);
+  // Heatmap des trackers libres
+  buildTrackerHeatmap(ym, labels, byDay, container);
+}
+
+function buildTrackerHeatmap(ym, labels, byDay, container) {
+  const trs = S.custom_trackers || [];
+  if (!trs.length) return;
+  // Collect data per tracker per day
+  const rows = trs.map(t => ({
+    t,
+    vals: labels.map(d => {
+      const lg = byDay[d];
+      if (!lg || !lg.custom_vals) return null;
+      const v = lg.custom_vals[t.id];
+      return (v != null && v !== 0) ? v : null;
+    }),
+  }));
+  // Only show if at least one tracker has data this month
+  const hasData = rows.some(r => r.vals.some(v => v != null));
+  if (!hasData) return;
+
+  const block = document.createElement('div');
+  block.className = 'chart-block';
+  block.style.overflowX = 'auto';
+
+  // Build table
+  const cellW = 28; // px per day cell
+  const labelW = 110;
+  let html = `<div class="chart-title">Trackers — ${shortMonth(ym)}</div>`;
+  html += `<table style="border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:${labelW + cellW * labels.length}px">`;
+  // Header row (day numbers)
+  html += `<tr><th style="width:${labelW}px;text-align:left;padding:0 6px 4px;color:var(--blanc-faded);font-weight:normal;font-size:10px">Tracker</th>`;
+  labels.forEach(d => {
+    html += `<th style="width:${cellW}px;text-align:center;padding:0 1px 4px;color:var(--blanc-faded);font-weight:normal">${d}</th>`;
+  });
+  html += `</tr>`;
+
+  // Data rows
+  rows.forEach(({t, vals}) => {
+    const numVals = vals.filter(v => v != null);
+    const minV = numVals.length ? Math.min(...numVals) : 0;
+    const maxV = numVals.length ? Math.max(...numVals) : 1;
+    const range = maxV - minV || 1;
+    const lbl = t.unit ? `${t.name} (${t.unit})` : t.name;
+    html += `<tr><td style="padding:2px 6px;color:var(--blanc-faded);white-space:nowrap;overflow:hidden;max-width:${labelW}px;text-overflow:ellipsis" title="${lbl}">${lbl}</td>`;
+    vals.forEach(v => {
+      if (v == null) {
+        html += `<td style="text-align:center;padding:2px 1px;color:var(--blanc-faded);opacity:0.3">—</td>`;
+      } else {
+        const ratio = (v - minV) / range; // 0 = min (red), 1 = max (green)
+        const r = Math.round(180 - ratio * 130);
+        const g = Math.round(80 + ratio * 110);
+        const b = 60;
+        const bg = `rgba(${r},${g},${b},0.55)`;
+        const disp = Number.isInteger(v) ? v : v.toFixed(1);
+        html += `<td style="text-align:center;padding:2px 1px;background:${bg};border-radius:3px;color:#f0e6d2">${disp}</td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+  html += `</table>`;
+  block.innerHTML = html;
+  container.appendChild(block);
 }
 
 function buildAverageCycleChart(container) {
