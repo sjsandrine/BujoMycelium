@@ -792,7 +792,12 @@ body::before{
       <label style="display:block;font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px">Seuils de rendement (champignons / niveau)</label>
       <div id="seuils-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px"></div>
     </div>
-    <div class="modal-actions">
+    <div style="margin-top:18px;border-top:1px solid var(--border-soft);padding-top:14px">
+      <label style="display:block;font-family:'Cormorant Upright',serif;font-size:11px;color:var(--blanc-faded);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px">Importer via presse-papier (mobile)</label>
+      <textarea id="import-paste-area" rows="4" placeholder="Collez ici le JSON exporté…" style="width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:4px;padding:8px;color:var(--blanc-casse);font-family:'JetBrains Mono',monospace;font-size:11px;resize:vertical;box-sizing:border-box"></textarea>
+      <button onclick="importFromPaste()" style="margin-top:6px;background:var(--vert-mousse);border:none;color:#fff;border-radius:6px;padding:7px 18px;font-size:13px;cursor:pointer;width:100%">⬆ Importer ce JSON</button>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
       <button class="btn-ghost" onclick="closeOverlay('ov-settings')">Annuler</button>
       <button class="btn-primary" onclick="saveSettings()">Enregistrer</button>
     </div>
@@ -2544,12 +2549,25 @@ function toast(msg, ms=2600) {
 // EXPORT / IMPORT / RESET
 // ============================================================
 function exportData() {
-  const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'tracker-' + today() + '.json';
-  a.click(); URL.revokeObjectURL(url);
+  const json = JSON.stringify(S, null, 2);
+  // Téléchargement (PC / Android)
+  try {
+    const blob = new Blob([json], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tracker-' + today() + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {}
+  // Copie presse-papier (iOS Safari)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json)
+      .then(() => toast('Exporté + copié dans le presse-papier !'))
+      .catch(() => toast('Exporté !'));
+  } else {
+    toast('Exporté !');
+  }
 }
 
 function importData(input) {
@@ -2558,13 +2576,31 @@ function importData(input) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      S = JSON.parse(e.target.result);
-      save(); renderAll();
-      toast('Données importées !');
-    } catch(err) { alert('Fichier JSON invalide.'); }
+      const parsed = JSON.parse(e.target.result);
+      // Sauvegarder d'abord dans localStorage, puis load() applique toutes les migrations
+      localStorage.setItem('tracker-v2', JSON.stringify(parsed));
+      load();
+      save();
+      renderAll();
+      toast('Données importées et migrées !');
+    } catch(err) { toast('Fichier JSON invalide.'); }
   };
   reader.readAsText(file);
   input.value = '';
+}
+
+function importFromPaste() {
+  const txt = document.getElementById('import-paste-area').value.trim();
+  if (!txt) return;
+  try {
+    const parsed = JSON.parse(txt);
+    localStorage.setItem('tracker-v2', JSON.stringify(parsed));
+    load();
+    save();
+    closeOverlay('ov-settings');
+    renderAll();
+    toast('Données importées et migrées !');
+  } catch(err) { toast('JSON invalide — vérifiez le texte collé.'); }
 }
 
 function confirmReset() {
