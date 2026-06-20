@@ -2575,32 +2575,56 @@ function importData(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
+    // Supprimer le BOM UTF-8 (Windows) s'il est présent
+    const text = e.target.result.replace(/^﻿/, '').trim();
+    let parsed;
     try {
-      const parsed = JSON.parse(e.target.result);
-      // Sauvegarder d'abord dans localStorage, puis load() applique toutes les migrations
+      parsed = JSON.parse(text);
+    } catch(err) {
+      toast('Fichier JSON invalide — impossible de lire le fichier.');
+      return;
+    }
+    try {
       localStorage.setItem('tracker-v2', JSON.stringify(parsed));
       load();
       save();
+    } catch(err) {
+      toast('Erreur de migration : ' + (err.message || err));
+      return;
+    }
+    try {
       renderAll();
-      toast('Données importées et migrées !');
-    } catch(err) { toast('Fichier JSON invalide.'); }
+    } catch(err) {
+      // Rendu partiel OK — les données sont quand même chargées
+      console.error('renderAll error after import:', err);
+    }
+    toast('Données importées et migrées !');
   };
   reader.readAsText(file);
   input.value = '';
 }
 
 function importFromPaste() {
-  const txt = document.getElementById('import-paste-area').value.trim();
+  const txt = document.getElementById('import-paste-area').value.replace(/^﻿/, '').trim();
   if (!txt) return;
+  let parsed;
   try {
-    const parsed = JSON.parse(txt);
+    parsed = JSON.parse(txt);
+  } catch(err) {
+    toast('JSON invalide — vérifiez le texte collé.');
+    return;
+  }
+  try {
     localStorage.setItem('tracker-v2', JSON.stringify(parsed));
     load();
     save();
-    closeOverlay('ov-settings');
-    renderAll();
-    toast('Données importées et migrées !');
-  } catch(err) { toast('JSON invalide — vérifiez le texte collé.'); }
+  } catch(err) {
+    toast('Erreur de migration : ' + (err.message || err));
+    return;
+  }
+  closeOverlay('ov-settings');
+  try { renderAll(); } catch(err) { console.error('renderAll error after import:', err); }
+  toast('Données importées et migrées !');
 }
 
 function confirmReset() {
