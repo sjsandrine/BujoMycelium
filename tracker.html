@@ -1955,13 +1955,6 @@ function renderToday() {
   document.getElementById('sl-reveil').value=log.reveil||''; document.getElementById('sl-reveil').disabled=ro;
   document.getElementById('sl-result').textContent=formatSommeil(log.sommeil);
 
-  // Remède
-  ['eau','manger','lit'].forEach(id=>{
-    const el=document.getElementById('rem-'+id);
-    el.className='remede-item'+(log.remede.includes(id)?' checked':'');
-    el.style.pointerEvents=ro?'none':'';el.style.opacity=ro?'0.5':'';
-  });
-
   // Abstinence
   const abst=log.abstinence;
   document.getElementById('abst-card').className='abstinence'+(abst?' checked':'');
