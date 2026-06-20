@@ -444,7 +444,7 @@ body::before{
       <label id="tr-weed-label">Habitude à décourager (g)</label>
       <input type="number" id="tr-weed" min="0" step="0.1" placeholder="0" onchange="updateWeed(this.value)">
     </div>
-    <div id="custom-tracker-inputs"></div>
+    <div id="custom-tracker-inputs" style="display:contents"></div>
     <div class="tracker-item">
       <label>Rendement (auto)</label>
       <div id="tr-rendement" style="font-family:'JetBrains Mono',monospace;font-size:20px;color:#a67c3a;padding:7px 0;">—</div>
@@ -1318,7 +1318,9 @@ function addCustomTracker() {
   save(); renderTrackerEditList(); renderToday();
 }
 function deleteCustomTracker(i) {
+  const id = S.custom_trackers[i].id;
   S.custom_trackers.splice(i, 1);
+  Object.values(S.journal).forEach(lg => { if (lg.custom_vals) delete lg.custom_vals[id]; });
   save(); renderTrackerEditList(); renderToday();
 }
 function renderCustomTrackerInputs() {
@@ -2083,18 +2085,18 @@ function renderProgression() {
       });
       const months = Object.keys(byMonth).sort().reverse();
       const total = months.reduce((s, m) => s + byMonth[m], 0);
+      const indNm=getIndName(), indUt=getIndUnit();
       const rows = months.map(m => {
         const label = new Date(m + '-15').toLocaleDateString('fr-FR', {month:'long'});
         const moisLabel = label.charAt(0).toUpperCase() + label.slice(1);
         return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--blanc-faded)">
-          <span>${moisLabel}</span><span class="used-count">${byMonth[m].toFixed(1)} g</span>
+          <span>${moisLabel}</span><span class="used-count">${byMonth[m].toFixed(1)} ${indUt}</span>
         </div>`;
       }).join('');
       const div=document.createElement('div'); div.className='used-item';
       div.style.cssText='flex-direction:column;align-items:stretch;gap:2px;';
-      const indNm=getIndName(), indUt=getIndUnit();
       div.innerHTML=`<span style="font-size:15px;margin-bottom:4px">${indNm}</span>
-        ${rows.replace(/g<\/span>/g,`${indUt}</span>`)}
+        ${rows}
         <div style="display:flex;justify-content:space-between;padding:4px 0 0;border-top:1px solid var(--border-soft);font-size:13px;margin-top:2px">
           <span style="color:var(--blanc-faded)">Total</span><span class="used-count">${total.toFixed(1)} ${indUt}</span>
         </div>`;
