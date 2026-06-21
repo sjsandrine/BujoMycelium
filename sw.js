@@ -1,4 +1,4 @@
-const CACHE = 'mon-tracker-v9';
+const CACHE = 'mon-tracker-v10';
 const STATIC = [
   './tracker.html',
   './manifest.json',
