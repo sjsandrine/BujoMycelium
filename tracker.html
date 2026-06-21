@@ -970,9 +970,20 @@ function getLog(d) {
 function habitIsChecked(log, id) {
   return log.habitudes.some(h => (typeof h==='string'?h:h.id)===id);
 }
-function habitCheck(log, id, pts, xp) { log.habitudes.push({id,pts,xp}); }
+function habitCheck(log, id, name, type, pts, xp) { log.habitudes.push({id,name,type,pts,xp}); }
 function habitUncheck(log, id) { log.habitudes = log.habitudes.filter(h=>(typeof h==='string'?h:h.id)!==id); }
 function habitStoredPts(log, id) { const h=log.habitudes.find(h=>typeof h!=='string'&&h.id===id); return h?h.pts:null; }
+// Habitudes cochées ce jour-là mais supprimées/désactivées depuis (nom stocké dans l'entrée)
+function habitOrphans(log, type, activeIds) {
+  return log.habitudes.filter(h => typeof h!=='string' && h.name && h.type===type && !activeIds.has(h.id));
+}
+function renderOrphanRow(h, isResp) {
+  const div=document.createElement('div');
+  div.className='habit checked'; div.style.opacity='0.55'; div.style.cursor='default';
+  div.title='Habitude archivée (supprimée ou désactivée depuis)';
+  div.innerHTML=`<div class="habit-left"><div class="checkbox"></div><div class="habit-name">${h.name} <span style="font-size:11px;color:var(--blanc-faded)">· archivée</span></div></div><div class="habit-reward"><span class="pts">+${h.pts} ${IC_CHAMP}</span>${isResp?`<span class="xp">+${h.pts} ${IC_GLAND}</span>`:''}</div>`;
+  return div;
+}
 function getHabitPts(h) { const ov=S.habitOverrides[h.id]; return (ov&&ov.pts!==undefined)?ov.pts:h.pts; }
 function getHabitName(h) { const ov=S.habitOverrides[h.id]; return (ov&&ov.name)?ov.name:h.name; }
 function isHabitActive(id) { return !S.habitDisabled[id] && !S.habitDeleted.includes(id); }
@@ -1208,7 +1219,7 @@ function toggleHabit(id, type) {
       const sp=habitStoredPts(log,id)??pts; habitUncheck(log,id);
       log.champ_gagnes-=sp; S.champTotal-=sp; S.champDispo-=sp;
     } else {
-      habitCheck(log,id,pts,0); log.champ_gagnes+=pts; S.champTotal+=pts; S.champDispo+=pts;
+      habitCheck(log,id,getHabitName(def),'selfcare',pts,0); log.champ_gagnes+=pts; S.champTotal+=pts; S.champDispo+=pts;
       if (def.isMeal && !log.remede.includes('manger')) { log.remede.push('manger'); log.champ_gagnes+=5; S.champTotal+=5; S.champDispo+=5; }
       toast(`+${pts} ${IC_CHAMP}`);
     }
@@ -1220,7 +1231,7 @@ function toggleHabit(id, type) {
       const sp=habitStoredPts(log,id)??pts; habitUncheck(log,id);
       log.champ_gagnes-=sp; log.glands_gagnes-=sp; S.champTotal-=sp; S.champDispo-=sp; S.glands-=sp;
     } else {
-      habitCheck(log,id,pts,pts); log.champ_gagnes+=pts; log.glands_gagnes+=pts;
+      habitCheck(log,id,getHabitName(def),'resp',pts,pts); log.champ_gagnes+=pts; log.glands_gagnes+=pts;
       S.champTotal+=pts; S.champDispo+=pts; S.glands+=pts;
       toast(`+${pts} ${IC_CHAMP}  +${pts} ${IC_GLAND}`);
     }
@@ -1971,7 +1982,8 @@ function renderToday() {
 
   // Selfcare list
   const scEl=document.getElementById('list-selfcare'); scEl.innerHTML='';
-  [...SELFCARE_DEFS,...S.customSelfcare].filter(h=>isHabitActive(h.id)).forEach(h=>{
+  const scActive=[...SELFCARE_DEFS,...S.customSelfcare].filter(h=>isHabitActive(h.id));
+  scActive.forEach(h=>{
     const done=habitIsChecked(log,h.id);
     const div=document.createElement('div');
     div.className='habit'+(done?' checked':'')+(ro?' ro':'');
@@ -1982,6 +1994,7 @@ function renderToday() {
     else div.style.opacity='0.6';
     scEl.appendChild(div);
   });
+  habitOrphans(log,'selfcare',new Set(scActive.map(h=>h.id))).forEach(h=>scEl.appendChild(renderOrphanRow(h,false)));
 
   // Resp list
   const rpEl=document.getElementById('list-resp'); rpEl.innerHTML='';
@@ -1992,7 +2005,8 @@ function renderToday() {
     ed.innerHTML=`<div class="habit-left"><div class="checkbox"></div><div class="habit-name">Écriture (${log.nb_mots} mots)</div></div><div class="habit-reward"><span class="pts">${eTier>0?'+'+eTier+' '+IC_CHAMP:'0 '+IC_CHAMP}</span><span class="xp">${eTier>0?'+'+eTier+' '+IC_GLAND:'0 '+IC_GLAND}</span></div>`;
     rpEl.appendChild(ed);
   }
-  [...RESP_DEFS,...S.customResp].filter(h=>isHabitActive(h.id)).forEach(h=>{
+  const rpActive=[...RESP_DEFS,...S.customResp].filter(h=>isHabitActive(h.id));
+  rpActive.forEach(h=>{
     const done=habitIsChecked(log,h.id);
     const div=document.createElement('div');
     div.className='habit'+(done?' checked':'');
@@ -2003,6 +2017,7 @@ function renderToday() {
     else div.style.opacity='0.6';
     rpEl.appendChild(div);
   });
+  habitOrphans(log,'resp',new Set(rpActive.map(h=>h.id))).forEach(h=>rpEl.appendChild(renderOrphanRow(h,true)));
 
   // Tâches
   const tachesEl=document.getElementById('list-taches'); tachesEl.innerHTML='';
