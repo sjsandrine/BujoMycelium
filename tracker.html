@@ -2098,7 +2098,7 @@ function renderProgression() {
       const m = date.slice(0, 7);
       if (!moisData[m]) moisData[m] = {abst:0, remede:0};
       if (entry.abstinence) moisData[m].abst++;
-      if (entry.remede && entry.remede.length) moisData[m].remede += entry.remede.length;
+      if (entry.remede && entry.remede.length) moisData[m].remede++;
     });
     const moisKeys = Object.keys(moisData).sort().reverse();
     if (!moisKeys.length) {
