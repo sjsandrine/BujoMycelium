@@ -546,6 +546,8 @@ body::before{
   </div>
   <div class="section-title">Engagement</div>
   <div id="engagement-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;"></div>
+  <div class="section-title">Décomptes mensuels</div>
+  <div id="monthly-counts" style="margin-bottom:20px"></div>
   <div class="section-title">Récompenses utilisées</div>
   <div class="used-list" id="used-list"><div style="color:var(--blanc-faded);font-size:14px;padding:8px 0;">Aucune récompense échangée pour l'instant.</div></div>
 </div>
@@ -943,6 +945,10 @@ function load() {
     if (!a.nom_au_moment && a.id !== 'weed') {
       const r = (S.rewards || []).find(x => x.id === a.id);
       a.nom_au_moment = r ? r.name : (a.name || 'Récompense supprimée');
+    }
+    // Migration : répartition mensuelle. Les achats existants sont attribués à mai 2026.
+    if (a.id !== 'weed' && !a.byMonth) {
+      a.byMonth = { '2026-05': a.count || 0 };
     }
   });
 }
@@ -1789,8 +1795,14 @@ function buyReward(id) {
     S.champDispo -= r.cost;
     const nomSnapshot = r.name;
     const existing = S.recompensesAchetees.find(x => x.id === id);
-    if (existing) { existing.count++; existing.nom_au_moment = nomSnapshot; }
-    else S.recompensesAchetees.push({id, nom_au_moment: nomSnapshot, name: nomSnapshot, count:1, date:today()});
+    const mois = today().slice(0, 7);
+    if (existing) {
+      existing.count++; existing.nom_au_moment = nomSnapshot;
+      if (!existing.byMonth) existing.byMonth = {};
+      existing.byMonth[mois] = (existing.byMonth[mois] || 0) + 1;
+    } else {
+      S.recompensesAchetees.push({id, nom_au_moment: nomSnapshot, name: nomSnapshot, count:1, date:today(), byMonth:{[mois]:1}});
+    }
     save(); renderAll();
     toast('Récompense échangée ! ✨');
   });
@@ -2073,19 +2085,63 @@ function renderProgression() {
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:14px 16px;text-align:center"><div style="font-family:'JetBrains Mono',monospace;font-size:32px;color:var(--moutarde)">${taux}%</div><div style="font-size:11px;color:var(--blanc-faded);font-family:'Cormorant Upright',serif;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px">Taux de remplissage</div></div>`;
   }
 
+  const moisLabel = (m) => {
+    const s = new Date(m + '-15T12:00:00').toLocaleDateString('fr-FR', {month:'long', year:'numeric'});
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  // Décomptes mensuels : jours d'abstinence + trousses de secours utilisées
+  const mc = document.getElementById('monthly-counts');
+  if (mc) {
+    const moisData = {};
+    Object.entries(S.journal).forEach(([date, entry]) => {
+      const m = date.slice(0, 7);
+      if (!moisData[m]) moisData[m] = {abst:0, remede:0};
+      if (entry.abstinence) moisData[m].abst++;
+      if (entry.remede && entry.remede.length) moisData[m].remede += entry.remede.length;
+    });
+    const moisKeys = Object.keys(moisData).sort().reverse();
+    if (!moisKeys.length) {
+      mc.innerHTML = '<div style="color:var(--blanc-faded);font-size:14px;padding:8px 0">Aucune donnée mensuelle.</div>';
+    } else {
+      mc.innerHTML = moisKeys.map(m => {
+        const d = moisData[m];
+        return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:12px 16px;margin-bottom:10px">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--blanc-casse);margin-bottom:8px">${moisLabel(m)}</div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--blanc-faded)"><span>Jours d'abstinence</span><span class="used-count">${d.abst}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--blanc-faded)"><span>Trousses de secours utilisées</span><span class="used-count">${d.remede}</span></div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Récompenses utilisées, détaillées par mois
   const ul = document.getElementById('used-list');
   ul.innerHTML = '';
   const shown = S.recompensesAchetees.filter(r=>r.id!=='weed');
   const weedRec = S.recompensesAchetees.find(r=>r.id==='weed');
-  if (!shown.length && !weedRec) {
+  const rewardMonths = {};
+  shown.forEach(r => {
+    const def = S.rewards.find(x => x.id === r.id);
+    const unitCost = def ? def.cost : 0;
+    const bm = r.byMonth || {};
+    Object.keys(bm).forEach(m => {
+      if (!bm[m]) return;
+      if (!rewardMonths[m]) rewardMonths[m] = [];
+      rewardMonths[m].push({name: r.nom_au_moment || r.name, count: bm[m], cost: bm[m] * unitCost});
+    });
+  });
+  const rewardMonthKeys = Object.keys(rewardMonths).sort().reverse();
+  if (!rewardMonthKeys.length && !weedRec) {
     ul.innerHTML = '<div style="color:var(--blanc-faded);font-size:14px;padding:8px 0">Aucune récompense échangée.</div>';
   } else {
-    shown.forEach(r => {
-      const rewardDef = S.rewards.find(x => x.id === r.id);
-      const unitCost = rewardDef ? rewardDef.cost : 0;
-      const totalCost = r.count * unitCost;
-      const div=document.createElement('div'); div.className='used-item';
-      div.innerHTML=`<span>${r.nom_au_moment||r.name}</span><span class="used-count">${r.count}× (${totalCost} ${IC_CHAMP})</span>`;
+    rewardMonthKeys.forEach(m => {
+      const rows = rewardMonths[m].map(it =>
+        `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--blanc-faded)"><span>${it.name}</span><span class="used-count">${it.count}× (${it.cost} ${IC_CHAMP})</span></div>`
+      ).join('');
+      const div = document.createElement('div'); div.className = 'used-item';
+      div.style.cssText = 'flex-direction:column;align-items:stretch;gap:2px;';
+      div.innerHTML = `<span style="font-size:15px;margin-bottom:4px">${moisLabel(m)}</span>${rows}`;
       ul.appendChild(div);
     });
     if (weedRec) {
@@ -2099,20 +2155,13 @@ function renderProgression() {
       const months = Object.keys(byMonth).sort().reverse();
       const total = months.reduce((s, m) => s + byMonth[m], 0);
       const indNm=getIndName(), indUt=getIndUnit();
-      const rows = months.map(m => {
-        const label = new Date(m + '-15').toLocaleDateString('fr-FR', {month:'long'});
-        const moisLabel = label.charAt(0).toUpperCase() + label.slice(1);
-        return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--blanc-faded)">
-          <span>${moisLabel}</span><span class="used-count">${byMonth[m].toFixed(1)} ${indUt}</span>
-        </div>`;
-      }).join('');
+      const rows = months.map(m =>
+        `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--blanc-faded)"><span>${moisLabel(m)}</span><span class="used-count">${byMonth[m].toFixed(1)} ${indUt}</span></div>`
+      ).join('');
       const div=document.createElement('div'); div.className='used-item';
       div.style.cssText='flex-direction:column;align-items:stretch;gap:2px;';
-      div.innerHTML=`<span style="font-size:15px;margin-bottom:4px">${indNm}</span>
-        ${rows}
-        <div style="display:flex;justify-content:space-between;padding:4px 0 0;border-top:1px solid var(--border-soft);font-size:13px;margin-top:2px">
-          <span style="color:var(--blanc-faded)">Total</span><span class="used-count">${total.toFixed(1)} ${indUt}</span>
-        </div>`;
+      div.innerHTML=`<span style="font-size:15px;margin-bottom:4px">${indNm}</span>${rows}
+        <div style="display:flex;justify-content:space-between;padding:4px 0 0;border-top:1px solid var(--border-soft);font-size:13px;margin-top:2px"><span style="color:var(--blanc-faded)">Total</span><span class="used-count">${total.toFixed(1)} ${indUt}</span></div>`;
       ul.appendChild(div);
     }
   }
