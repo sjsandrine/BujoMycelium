@@ -1,4 +1,4 @@
-const CACHE = 'mon-tracker-v12';
+const CACHE = 'mon-tracker-v13';
 const STATIC = [
   './tracker.html',
   './manifest.json',
@@ -39,6 +39,18 @@ self.addEventListener('fetch', e => {
         }).catch(() => cached);
         return cached || networkFetch;
       })
+    );
+    return;
+  }
+
+  // Network-first pour les pages HTML : toujours la dernière version en ligne,
+  // repli sur le cache uniquement hors-ligne.
+  if (e.request.mode === 'navigate' || e.request.url.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) { const clone = res.clone(); caches.open(CACHE).then(c => c.put(e.request, clone)); }
+        return res;
+      }).catch(() => caches.match(e.request).then(c => c || caches.match('./tracker.html')))
     );
     return;
   }
